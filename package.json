@@ -1,0 +1,29 @@
+{
+  "name": "ey-hackathon-data-import",
+  "version": "1.0.0",
+  "description": "Import Voltura Group data to SQLite database",
+  "main": "index.js",
+  "packageManager": "pnpm@10.19.0",
+  "scripts": {
+    "build": "tsc",
+    "schema": "ts-node app/src/create-schema.ts",
+    "import": "ts-node app/src/import-data.ts",
+    "import:reset": "ts-node app/src/import-data.ts --reset",
+    "dev": "ts-node app/src/import-data.ts",
+    "query": "ts-node app/src/query-example.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^9.2.2",
+    "csv-parser": "^3.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.10.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
