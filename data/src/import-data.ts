@@ -5,8 +5,8 @@ import csvParser from 'csv-parser';
 import * as xlsx from 'xlsx';
 import { SchemaManager } from './schema';
 
-const DB_PATH = path.join(__dirname, '..', '..', 'voltura_data.db');
-const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const DATA_DIR = path.join(__dirname, '..', 'dataset');
+const DB_PATH = path.join(__dirname, '..', 'voltura_data.db');
 
 interface CsvRow {
   [key: string]: string;
@@ -303,18 +303,22 @@ class DataImporter {
     console.log('\n--- Importing Excel Files ---\n');
 
     // Import customer product keys
+    // Note: This file actually contains customer master data, not customer-product mappings
+    // The file has: Code, Name, Buying Group, Region, Account Manager
+    // But our schema expects: customer_code, customer_name, item_code, product_description
+    // We'll map the customer data and leave item_code and product_description as null
     console.log('Importing customer product keys...');
+    console.log('⚠️  Note: File contains customer master data only (no product mapping)');
     const customerKeyCount = this.importExcelFile(
       path.join(DATA_DIR, 'Voltura Group Customer_Product Key.xlsx'),
       'customer_product_keys',
       {
-        customer_code: 'Customer Code',
-        customer_name: 'Customer Name',
-        item_code: 'Item Code',
-        product_description: 'Product Description'
+        customer_code: 'Code',
+        customer_name: 'Name'
+        // item_code and product_description will be null as they don't exist in this file
       }
     );
-    console.log(`✓ Imported ${customerKeyCount} customer product key records\n`);
+    console.log(`✓ Imported ${customerKeyCount} customer records\n`);
 
     // Import pallet sizes
     console.log('Importing pallet sizes...');
@@ -322,9 +326,9 @@ class DataImporter {
       path.join(DATA_DIR, 'Voltura_group_pallet_size.xlsx'),
       'pallet_sizes',
       {
-        item_code: 'Item Code',
-        pallet_quantity: 'Pallet Qty',
-        description: 'Description'
+        item_code: 'ITEM CODE',
+        pallet_quantity: 'Pallet Quantity'
+        // description column doesn't exist in the file, will be null
       }
     );
     console.log(`✓ Imported ${palletCount} pallet size records\n`);

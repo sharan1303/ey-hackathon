@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import * as path from 'path';
 
-const DB_PATH = path.join(__dirname, '..', '..', 'voltura_data.db');
+const DB_PATH = path.join(__dirname, '..', 'voltura_data.db');
 
 /**
  * Example queries to demonstrate how to use the database
