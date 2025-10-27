@@ -10,7 +10,8 @@
     "import": "ts-node src/import-data.ts",
     "import:reset": "ts-node src/import-data.ts --reset",
     "dev": "ts-node src/import-data.ts",
-    "query": "ts-node src/query-example.ts"
+    "query": "ts-node src/query-example.ts",
+    "clean": "ts-node clean-data.ts"
   },
   "keywords": [],
   "author": "",

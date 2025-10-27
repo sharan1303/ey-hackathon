@@ -35,6 +35,20 @@ pnpm run dev            # Import data (preserves existing)
 pnpm run import:reset   # Delete database and reimport
 ```
 
+### Data Cleaning
+
+```bash
+pnpm run clean  # Clean data (creates voltura_data_cleaned.db)
+```
+
+This command:
+
+- Creates a copy of `voltura_data.db` as `voltura_data_cleaned.db`
+- Removes duplicate item codes from catalogue_prices and landed_costs
+- Removes empty item codes from pallet_sizes
+- Adds `customer_name_standardized` column to sales table
+- Generates a detailed cleaning report at `data-cleaning-report.md`
+
 ### Query Examples
 
 ```bash
@@ -43,13 +57,16 @@ pnpm run query  # Run example queries
 
 ## Database Structure
 
-The database includes:
+**Databases:**
+
+- `voltura_data.db` - Original database with raw imported data (1:1 mapping of source files)
+- `voltura_data_cleaned.db` - Cleaned database ready for analysis (created by `pnpm run clean`)
 
 **Tables:**
 
 - `catalogue_prices` - Product pricing tiers
 - `landed_costs` - Product cost information
-- `sales` - Sales transaction records
+- `sales` - Sales transaction records (cleaned version includes `customer_name_standardized` column)
 - `customer_product_keys` - Customer-product mappings
 - `pallet_sizes` - Pallet quantity information
 
@@ -79,13 +96,19 @@ The import process reads from the `data/` folder:
 ```typescript
 import Database from 'better-sqlite3';
 
-const db = new Database('voltura_data.db');
+// Use the cleaned database for analysis
+const db = new Database('voltura_data_cleaned.db');
 
 // Simple query
 const products = db.prepare('SELECT * FROM catalogue_prices LIMIT 10').all();
 
-// Query with parameters
-const sales = db.prepare('SELECT * FROM sales WHERE item_code = ?').all('IEZ51697949');
+// Query with standardized customer names
+const sales = db.prepare(`
+  SELECT customer_code, customer_name_standardized, SUM(line_total) as revenue
+  FROM sales
+  GROUP BY customer_code, customer_name_standardized
+  ORDER BY revenue DESC
+`).all();
 
 db.close();
 ```
