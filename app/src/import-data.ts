@@ -115,6 +115,91 @@ class DataImporter {
     });
   }
 
+  private async importSalesData(filePath: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const rows: CsvRow[] = [];
+      
+      fs.createReadStream(filePath)
+        .pipe(csvParser())
+        .on('data', (row: CsvRow) => {
+          rows.push(row);
+        })
+        .on('end', () => {
+          if (rows.length === 0) {
+            console.log(`  No data found in ${path.basename(filePath)}`);
+            resolve(0);
+            return;
+          }
+
+          // Filter out empty rows
+          const validRows = rows.filter(row => {
+            return Object.values(row).some(val => val && val.trim() !== '');
+          });
+
+          if (validRows.length === 0) {
+            console.log(`  No valid data found in ${path.basename(filePath)}`);
+            resolve(0);
+            return;
+          }
+
+          const insertStmt = this.db.prepare(`
+            INSERT INTO sales (
+              invoice_number, invoice_date, customer_code, customer_name,
+              item_code, quantity, unit_price, discount_percent, line_total
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+
+          const insertMany = this.db.transaction((rows: CsvRow[]) => {
+            for (const row of rows) {
+              const invoiceNumber = row['Document Number'] || null;
+              const invoiceDateRaw = row['Document Date'];
+              const customerCode = row['Customer Code'] || null;
+              const customerName = row['Customer Name'] || null;
+              const itemCode = row['Item SKU'] || null;
+              const quantityStr = row['Item Quantity'];
+              const priceStr = row['Price'];
+              
+              // Convert date from DD/MM/YYYY to YYYY-MM-DD
+              let invoiceDate = null;
+              if (invoiceDateRaw && invoiceDateRaw.trim() !== '') {
+                const dateParts = invoiceDateRaw.trim().split('/');
+                if (dateParts.length === 3) {
+                  const [day, month, year] = dateParts;
+                  // Convert to YYYY-MM-DD format
+                  invoiceDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+              }
+              
+              // Parse numbers
+              const quantity = quantityStr && quantityStr.trim() !== '' ? parseFloat(quantityStr) : null;
+              const unitPrice = priceStr && priceStr.trim() !== '' ? parseFloat(priceStr) : null;
+              
+              // Calculate line total
+              const lineTotal = (quantity !== null && unitPrice !== null) 
+                ? quantity * unitPrice 
+                : null;
+              
+              insertStmt.run(
+                invoiceNumber,
+                invoiceDate,
+                customerCode,
+                customerName,
+                itemCode,
+                quantity,
+                unitPrice,
+                null, // discount_percent
+                lineTotal
+              );
+            }
+          });
+
+          insertMany(validRows);
+          resolve(validRows.length);
+        })
+        .on('error', reject);
+    });
+  }
+
   private importExcelFile(
     filePath: string,
     tableName: string,
@@ -210,20 +295,8 @@ class DataImporter {
 
     // Import sales data (this is the large file)
     console.log('Importing sales data (this may take a while)...');
-    const salesCount = await this.importCsvFile(
-      path.join(DATA_DIR, 'voltura_group_sales.csv'),
-      'sales',
-      {
-        invoice_number: 'Invoice Number',
-        invoice_date: 'Invoice Date',
-        customer_code: 'Customer Code',
-        customer_name: 'Customer Name',
-        item_code: 'Item Code',
-        quantity: 'Quantity',
-        unit_price: 'Unit Price',
-        discount_percent: 'Discount %',
-        line_total: 'Line Total'
-      }
+    const salesCount = await this.importSalesData(
+      path.join(DATA_DIR, 'voltura_group_sales.csv')
     );
     console.log(`✓ Imported ${salesCount} sales records\n`);
 
