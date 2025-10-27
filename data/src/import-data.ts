@@ -5,8 +5,8 @@ import csvParser from 'csv-parser';
 import * as xlsx from 'xlsx';
 import { SchemaManager } from './schema';
 
-const DB_PATH = path.join(__dirname, '..', '..', 'voltura_data.db');
-const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const DATA_DIR = path.join(__dirname, '..', 'dataset');
+const DB_PATH = path.join(__dirname, '..', 'voltura_data.db');
 
 interface CsvRow {
   [key: string]: string;

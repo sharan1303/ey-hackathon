@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as readline from 'readline';
 import { SchemaManager } from './schema';
 
-const DB_PATH = path.join(__dirname, '..', '..', 'voltura_data.db');
+const DB_PATH = path.join(__dirname, '..', 'voltura_data.db');
 
 /**
  * Prompts user for confirmation

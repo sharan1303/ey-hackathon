@@ -6,11 +6,11 @@
   "packageManager": "pnpm@10.19.0",
   "scripts": {
     "build": "tsc",
-    "schema": "ts-node app/src/create-schema.ts",
-    "import": "ts-node app/src/import-data.ts",
-    "import:reset": "ts-node app/src/import-data.ts --reset",
-    "dev": "ts-node app/src/import-data.ts",
-    "query": "ts-node app/src/query-example.ts"
+    "schema": "ts-node src/create-schema.ts",
+    "import": "ts-node src/import-data.ts",
+    "import:reset": "ts-node src/import-data.ts --reset",
+    "dev": "ts-node src/import-data.ts",
+    "query": "ts-node src/query-example.ts"
   },
   "keywords": [],
   "author": "",

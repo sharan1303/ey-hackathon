@@ -12,7 +12,7 @@ export class SchemaManager {
 
   constructor(db: Database.Database) {
     this.db = db;
-    this.schemaPath = path.join(__dirname, '..', 'schema.sql');
+    this.schemaPath = path.join(__dirname, '..', '..', 'data', 'schema','schema.sql');
   }
 
   /**
