@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { 
   getExecutiveDashboard, 
   getProblemAreasReport 
-} from '../lib/database';
+} from '../lib/queries';
 
 export const executiveSummaryTool = createTool({
   id: 'executive-summary',
