@@ -408,10 +408,165 @@ class DataCleaner {
   }
 
   /**
+   * Drop original columns and rename corrected columns
+   */
+  private finalizeCleanedColumns() {
+    console.log('\n=== Step 9: Finalizing Cleaned Columns ===\n');
+
+    // Drop views that depend on the sales table
+    console.log('Dropping views that depend on sales table...');
+    const views = ['vw_product_pricing', 'vw_sales_by_customer', 'vw_sales_by_product', 'vw_monthly_sales'];
+    for (const view of views) {
+      try {
+        this.db.prepare(`DROP VIEW IF EXISTS ${view}`).run();
+        console.log(`✓ Dropped view: ${view}`);
+      } catch (error) {
+        console.log(`⚠ Could not drop view ${view}: ${error}`);
+      }
+    }
+
+    // SQLite doesn't support DROP COLUMN directly, so we need to recreate the table
+    console.log('Creating new sales table with only cleaned columns...');
+
+    // Create new table with only the columns we want
+    this.db.prepare(`
+      CREATE TABLE sales_cleaned (
+        id INTEGER PRIMARY KEY,
+        invoice_number TEXT,
+        invoice_date TEXT,
+        customer_code TEXT,
+        customer_name TEXT,
+        item_code TEXT,
+        quantity REAL,
+        unit_price REAL,
+        discount_percent REAL,
+        line_total REAL,
+        document_type TEXT,
+        is_rebate INTEGER DEFAULT 0,
+        is_return INTEGER DEFAULT 0,
+        is_sample INTEGER DEFAULT 0,
+        unit_type TEXT,
+        data_quality_issue TEXT
+      )
+    `).run();
+
+    console.log('✓ Created new sales table structure');
+
+    // Copy data with corrected columns renamed
+    console.log('Copying data with corrected values...');
+    this.db.prepare(`
+      INSERT INTO sales_cleaned (
+        id, invoice_number, invoice_date, customer_code, customer_name,
+        item_code, quantity, unit_price, discount_percent, line_total,
+        document_type, is_rebate, is_return, is_sample, unit_type, data_quality_issue
+      )
+      SELECT 
+        id, invoice_number, invoice_date, customer_code, customer_name_standardized,
+        item_code, quantity_corrected, unit_price_corrected, discount_percent, line_total,
+        document_type, is_rebate, is_return, is_sample, unit_type, data_quality_issue
+      FROM sales
+    `).run();
+
+    console.log('✓ Copied data with corrected values');
+
+    // Drop old table and rename new one
+    this.db.prepare('DROP TABLE sales').run();
+    this.db.prepare('ALTER TABLE sales_cleaned RENAME TO sales').run();
+
+    console.log('✓ Replaced sales table with cleaned version');
+    console.log('✓ Original columns removed, corrected values are now the defaults');
+    
+    // Recreate views with updated column names
+    console.log('Recreating views with updated schema...');
+    this.recreateViews();
+    
+    // Compact the database to reclaim space
+    console.log('Compacting database...');
+    this.db.prepare('VACUUM').run();
+    console.log('✓ Database compacted');
+  }
+
+  /**
+   * Recreate views that were dropped
+   */
+  private recreateViews() {
+    // vw_product_pricing
+    this.db.prepare(`
+      CREATE VIEW vw_product_pricing AS
+      SELECT 
+        cp.item_code,
+        cp.ie_trade as catalogue_price,
+        lc.landed_cost_euro as landed_cost,
+        cp.ie_trade - lc.landed_cost_euro as margin,
+        CASE 
+          WHEN lc.landed_cost_euro > 0 
+          THEN ((cp.ie_trade - lc.landed_cost_euro) / lc.landed_cost_euro) * 100 
+          ELSE NULL 
+        END as margin_percentage
+      FROM catalogue_prices cp
+      LEFT JOIN landed_costs lc ON cp.item_code = lc.item_code
+    `).run();
+    console.log('✓ Recreated view: vw_product_pricing');
+
+    // vw_sales_by_customer
+    this.db.prepare(`
+      CREATE VIEW vw_sales_by_customer AS
+      SELECT 
+        customer_code,
+        customer_name,
+        COUNT(*) as transaction_count,
+        SUM(quantity) as total_quantity,
+        SUM(line_total) as total_revenue
+      FROM sales
+      WHERE document_type = 'INV'
+        AND is_return = 0
+        AND is_rebate = 0
+        AND is_sample = 0
+      GROUP BY customer_code, customer_name
+    `).run();
+    console.log('✓ Recreated view: vw_sales_by_customer');
+
+    // vw_sales_by_product
+    this.db.prepare(`
+      CREATE VIEW vw_sales_by_product AS
+      SELECT 
+        item_code,
+        COUNT(*) as transaction_count,
+        SUM(quantity) as total_quantity,
+        SUM(line_total) as total_revenue,
+        AVG(unit_price) as avg_price
+      FROM sales
+      WHERE document_type = 'INV'
+        AND is_return = 0
+        AND is_rebate = 0
+        AND is_sample = 0
+      GROUP BY item_code
+    `).run();
+    console.log('✓ Recreated view: vw_sales_by_product');
+
+    // vw_monthly_sales
+    this.db.prepare(`
+      CREATE VIEW vw_monthly_sales AS
+      SELECT 
+        strftime('%Y-%m', invoice_date) as month,
+        COUNT(*) as transaction_count,
+        SUM(quantity) as total_quantity,
+        SUM(line_total) as total_revenue
+      FROM sales
+      WHERE document_type = 'INV'
+        AND is_return = 0
+        AND is_rebate = 0
+        AND is_sample = 0
+      GROUP BY strftime('%Y-%m', invoice_date)
+    `).run();
+    console.log('✓ Recreated view: vw_monthly_sales');
+  }
+
+  /**
    * Generate a summary report
    */
   private generateReport() {
-    console.log('\n=== Step 9: Generating Summary Report ===\n');
+    console.log('\n=== Step 10: Generating Summary Report ===\n');
 
     const catalogueCount = this.db.prepare('SELECT COUNT(*) as count FROM catalogue_prices').get() as { count: number };
     const landedCount = this.db.prepare('SELECT COUNT(*) as count FROM landed_costs').get() as { count: number };
@@ -519,19 +674,28 @@ ${this.stats.customerNameMappings.length > 0 ? this.generateCustomerMappingTable
 | customer_product_keys | ${this.getCount('SELECT COUNT(*) as count FROM customer_product_keys')} |
 | pallet_sizes | ${palletCount.count} |
 
-## New Columns Added to Sales Table
+## Sales Table Schema (Cleaned)
 
 | Column | Type | Description |
 |--------|------|-------------|
+| \`id\` | INTEGER | Primary key |
+| \`invoice_number\` | TEXT | Invoice or credit note number |
+| \`invoice_date\` | TEXT | Transaction date |
+| \`customer_code\` | TEXT | Customer identifier |
+| \`customer_name\` | TEXT | Standardized customer name |
+| \`item_code\` | TEXT | Product identifier |
+| \`quantity\` | REAL | Corrected quantity (after DQ fixes) |
+| \`unit_price\` | REAL | Corrected unit price (after DQ fixes) |
+| \`discount_percent\` | REAL | Discount percentage applied |
+| \`line_total\` | REAL | Total line value |
 | \`document_type\` | TEXT | 'INV' for Invoice, 'CRN' for Credit Note |
 | \`is_rebate\` | INTEGER | 1 if record is a rebate/margin adjustment |
 | \`is_return\` | INTEGER | 1 if record is a product return |
 | \`is_sample\` | INTEGER | 1 if record is a sample/free item |
 | \`unit_type\` | TEXT | 'meter' for fractional quantities, NULL otherwise |
-| \`quantity_corrected\` | REAL | Corrected quantity (after DQ fixes) |
-| \`unit_price_corrected\` | REAL | Corrected unit price (after DQ fixes) |
 | \`data_quality_issue\` | TEXT | Description of any DQ issue found |
-| \`customer_name_standardized\` | TEXT | Standardized customer name |
+
+**Note:** The cleaned database contains only corrected values. Original uncleaned data is preserved in \`voltura_data.db\`.
 
 ## Usage Examples
 
@@ -548,16 +712,16 @@ WHERE document_type = 'INV'
 \`\`\`sql
 SELECT 
   customer_code,
-  customer_name_standardized,
+  customer_name,
   SUM(CASE WHEN is_return = 0 THEN line_total ELSE 0 END) as net_revenue
 FROM sales
-GROUP BY customer_code, customer_name_standardized;
+GROUP BY customer_code, customer_name;
 \`\`\`
 
 ### Find products sold by meter
 
 \`\`\`sql
-SELECT item_code, quantity_corrected, unit_type
+SELECT item_code, quantity, unit_type
 FROM sales
 WHERE unit_type = 'meter';
 \`\`\`
@@ -565,7 +729,7 @@ WHERE unit_type = 'meter';
 ### Review data quality issues
 
 \`\`\`sql
-SELECT invoice_number, item_code, quantity, quantity_corrected, data_quality_issue
+SELECT invoice_number, item_code, quantity, data_quality_issue
 FROM sales
 WHERE data_quality_issue IS NOT NULL;
 \`\`\`
@@ -579,14 +743,14 @@ const db = new Database('data/voltura_data_cleaned.db');
 // Get actual sales (excluding returns, rebates, samples)
 const actualSales = db.prepare(\`
   SELECT 
-    customer_name_standardized,
-    SUM(quantity_corrected * unit_price_corrected) as revenue
+    customer_name,
+    SUM(quantity * unit_price) as revenue
   FROM sales
   WHERE document_type = 'INV'
     AND is_return = 0
     AND is_rebate = 0
     AND is_sample = 0
-  GROUP BY customer_name_standardized
+  GROUP BY customer_name
   ORDER BY revenue DESC
 \`).all();
 \`\`\`
@@ -595,8 +759,9 @@ const actualSales = db.prepare(\`
 
 - Original database remains unchanged at \`voltura_data.db\`
 - All cleaning operations were performed in transactions
-- Business rules preserve data while adding metadata for analysis
-- Use corrected columns (\`quantity_corrected\`, \`unit_price_corrected\`) for accurate analysis
+- The cleaned database contains only corrected values in standard columns
+- \`quantity\` and \`unit_price\` columns contain the corrected values (not the original uncleaned data)
+- \`customer_name\` contains the standardized customer name (not the original variations)
 `;
 
     fs.writeFileSync(REPORT_FILE, report);
@@ -647,6 +812,7 @@ const actualSales = db.prepare(\`
       this.removeDuplicatesLanded();
       this.removeEmptyPallets();
       this.standardizeCustomerNames();
+      this.finalizeCleanedColumns();
       this.generateReport();
 
       console.log('\n╔════════════════════════════════════════════╗');

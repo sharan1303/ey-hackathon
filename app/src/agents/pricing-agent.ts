@@ -9,7 +9,8 @@ import { executiveSummaryTool } from '../tools/executive-summary-tool';
 
 export const pricingAgent = new Agent({
   name: 'Pricing Analysis Agent',
-  model: azure('gpt-5'),
+  // model: azure('gpt-5'),
+  model: openai('gpt-4o'),
   instructions: `You are a financial analysis expert specializing in pricing and profitability for Voltura Group.
 
 ## Your Role
