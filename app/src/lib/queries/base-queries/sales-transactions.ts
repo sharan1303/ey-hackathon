@@ -100,10 +100,11 @@ export function getSalesTransactions(filters: SalesTransactionFilters = {}): Sal
   }
   
   // Discount filters - calculated inline in WHERE clause
+  // Formula works for both positive and negative values (returns)
   if (minDiscount !== undefined) {
     conditions.push(`
       CASE 
-        WHEN cp.ie_base IS NOT NULL AND cp.ie_base > 0 AND s.quantity > 0 AND s.line_total > 0
+        WHEN cp.ie_base IS NOT NULL AND cp.ie_base > 0 AND s.quantity != 0
         THEN ((s.quantity * cp.ie_base) - s.line_total) / (s.quantity * cp.ie_base) * 100
         ELSE 0 
       END >= ?
@@ -114,7 +115,7 @@ export function getSalesTransactions(filters: SalesTransactionFilters = {}): Sal
   if (maxDiscount !== undefined) {
     conditions.push(`
       CASE 
-        WHEN cp.ie_base IS NOT NULL AND cp.ie_base > 0 AND s.quantity > 0 AND s.line_total > 0
+        WHEN cp.ie_base IS NOT NULL AND cp.ie_base > 0 AND s.quantity != 0
         THEN ((s.quantity * cp.ie_base) - s.line_total) / (s.quantity * cp.ie_base) * 100
         ELSE 0 
       END <= ?
@@ -141,7 +142,7 @@ export function getSalesTransactions(filters: SalesTransactionFilters = {}): Sal
       s.unit_price,
       s.line_total,
       CASE 
-        WHEN cp.ie_base IS NOT NULL AND cp.ie_base > 0 AND s.quantity > 0 AND s.line_total > 0
+        WHEN cp.ie_base IS NOT NULL AND cp.ie_base > 0 AND s.quantity != 0
         THEN ((s.quantity * cp.ie_base) - s.line_total) / (s.quantity * cp.ie_base) * 100
         ELSE 0 
       END as discount_percent,

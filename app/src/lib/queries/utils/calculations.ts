@@ -215,11 +215,11 @@ export interface TransactionWithCataloguePrice {
 export function calculateDiscount(transaction: TransactionWithCataloguePrice): number {
   const cataloguePrice = transaction.catalogue_price_base;
   
-  // Return 0 if no catalogue price, invalid price, or invalid quantity
+  // Return 0 if no catalogue price, invalid price, or zero quantity
   if (
     cataloguePrice === null || 
     cataloguePrice <= 0 || 
-    transaction.quantity <= 0
+    transaction.quantity === 0
   ) {
     return 0;
   }
