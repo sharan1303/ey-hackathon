@@ -6,8 +6,8 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Database connection
-const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '../../voltura_data_cleaned.db');
+// Database connection - use the canonical database in the data folder
+const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '../../../data/voltura_data_cleaned.db');
 let db: Database.Database | null = null;
 
 function getDb(): Database.Database {
@@ -173,7 +173,8 @@ export function getCustomerProfitability(
   endDate?: string,
   includeReturns = false,
   sortBy: 'margin' | 'revenue' | 'margin_percent' = 'margin',
-  limit = 100
+  limit = 100,
+  order: 'asc' | 'desc' = 'desc'
 ): CustomerProfitability[] {
   const dateRange = startDate && endDate ? { startDate, endDate } : getDefaultDateRange();
   
@@ -182,6 +183,8 @@ export function getCustomerProfitability(
     revenue: 'total_revenue',
     margin_percent: 'margin_percent'
   }[sortBy];
+  
+  const sortOrder = order.toUpperCase();
   
   const query = `
     SELECT 
@@ -207,7 +210,7 @@ export function getCustomerProfitability(
       AND s.invoice_date BETWEEN ? AND ?
       AND s.customer_code IS NOT NULL
     GROUP BY s.customer_code, s.customer_name_standardized
-    ORDER BY ${sortColumn} DESC
+    ORDER BY ${sortColumn} ${sortOrder}
     LIMIT ?
   `;
   
@@ -235,7 +238,8 @@ export function getProductPerformance(
   startDate?: string,
   endDate?: string,
   sortBy: 'revenue' | 'margin' | 'quantity' | 'margin_percent' = 'revenue',
-  limit = 100
+  limit = 100,
+  order: 'asc' | 'desc' = 'desc'
 ): ProductPerformance[] {
   const dateRange = startDate && endDate ? { startDate, endDate } : getDefaultDateRange();
   
@@ -245,6 +249,8 @@ export function getProductPerformance(
     quantity: 'quantity_sold',
     margin_percent: 'margin_percent'
   }[sortBy];
+  
+  const sortOrder = order.toUpperCase();
   
   const query = `
     SELECT 
@@ -271,7 +277,7 @@ export function getProductPerformance(
       AND s.is_return = 0
       AND s.invoice_date BETWEEN ? AND ?
     GROUP BY s.item_code
-    ORDER BY ${sortColumn} DESC
+    ORDER BY ${sortColumn} ${sortOrder}
     LIMIT ?
   `;
   

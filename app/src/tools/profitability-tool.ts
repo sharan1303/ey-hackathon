@@ -24,6 +24,8 @@ export const profitabilityTool = createTool({
     endDate: z.string().optional().describe('End date in YYYY-MM-DD format'),
     sortBy: z.enum(['margin', 'revenue', 'margin_percent', 'quantity']).optional().default('margin')
       .describe('Sort results by: margin (total profit), revenue (total sales), margin_percent (margin %), or quantity (units sold)'),
+    order: z.enum(['asc', 'desc']).optional().default('desc')
+      .describe('Sort order: desc for highest first (most profitable), asc for lowest first (least profitable)'),
     limit: z.number().optional().default(20).describe('Maximum number of results to return'),
     includeReturns: z.boolean().optional().default(false).describe('Include returns in the analysis')
   }),
@@ -43,12 +45,13 @@ export const profitabilityTool = createTool({
   
   execute: async ({ context, mastra }) => {
     const logger = mastra?.getLogger();
-    const { analyzeBy, startDate, endDate, sortBy, limit, includeReturns } = context;
+    const { analyzeBy, startDate, endDate, sortBy, order, limit, includeReturns } = context;
     
     logger?.info('Executing profitability-analysis tool', {
       analyzeBy,
       dateRange: startDate && endDate ? `${startDate} to ${endDate}` : 'default (last 12 months)',
       sortBy,
+      order,
       limit,
       includeReturns
     });
@@ -59,7 +62,8 @@ export const profitabilityTool = createTool({
         endDate, 
         includeReturns,
         sortBy as 'margin' | 'revenue' | 'margin_percent',
-        limit
+        limit,
+        order as 'asc' | 'desc'
       );
       
       logger?.info('Profitability analysis complete', {
@@ -86,7 +90,8 @@ export const profitabilityTool = createTool({
         startDate,
         endDate,
         sortBy as 'revenue' | 'margin' | 'quantity' | 'margin_percent',
-        limit
+        limit,
+        order as 'asc' | 'desc'
       );
       
       logger?.info('Profitability analysis complete', {
