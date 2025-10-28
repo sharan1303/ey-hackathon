@@ -1,13 +1,9 @@
 import Database from 'better-sqlite3';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-// Get __dirname equivalent in ES modules
-const dbFilename = fileURLToPath(import.meta.url);
-const dbDirname = path.dirname(dbFilename);
 
 // Database connection
-const DB_PATH = process.env.DATABASE_PATH || path.join(dbDirname, '../../../data/voltura_data_cleaned.db');
+const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), '../../../../data/voltura_data_cleaned.db');
+
 let db: Database.Database | null = null;
 
 export function getDb(): Database.Database {

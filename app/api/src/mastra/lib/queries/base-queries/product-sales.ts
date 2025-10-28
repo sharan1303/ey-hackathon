@@ -116,7 +116,7 @@ export function getProductSales(filters: ProductSalesFilters = {}): ProductSales
   const query = `
     SELECT 
       s.item_code,
-      COALESCE(cpk.product_description, ps.description, 'Unknown') as product_description,
+      COALESCE(MAX(s.item_description), 'Unknown') as product_description,
       SUM(s.quantity) as total_quantity,
       SUM(s.line_total) as total_revenue,
       SUM(s.quantity * COALESCE(lc.landed_cost_euro, 0)) as total_cost,
@@ -127,8 +127,6 @@ export function getProductSales(filters: ProductSalesFilters = {}): ProductSales
     FROM sales s
     LEFT JOIN landed_costs lc ON s.item_code = lc.item_code
     LEFT JOIN catalogue_prices cp ON s.item_code = cp.item_code
-    LEFT JOIN customer_product_keys cpk ON s.item_code = cpk.item_code
-    LEFT JOIN pallet_sizes ps ON s.item_code = ps.item_code
     WHERE ${conditions.join(' AND ')}
     GROUP BY s.item_code, lc.landed_cost_euro, cp.ie_trade
     ${havingConditions.length > 0 ? 'HAVING ' + havingConditions.join(' AND ') : ''}

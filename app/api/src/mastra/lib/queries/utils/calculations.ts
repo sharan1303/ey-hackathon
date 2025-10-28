@@ -14,26 +14,31 @@ Decimal.set({
  * @param cost Total cost
  * @returns Margin amount rounded to 2 decimal places
  */
-export function calculateMargin(revenue: number, cost: number): number {
-  const revenueDecimal = new Decimal(revenue);
-  const costDecimal = new Decimal(cost);
+export function calculateMargin(revenue: number | null | undefined, cost: number | null | undefined): number {
+  const revenueVal = revenue ?? 0;
+  const costVal = cost ?? 0;
+  const revenueDecimal = new Decimal(revenueVal);
+  const costDecimal = new Decimal(costVal);
   return revenueDecimal.minus(costDecimal).toDecimalPlaces(2).toNumber();
 }
 
 /**
- * Calculate margin percentage ((revenue - cost) / cost * 100)
+ * Calculate margin percentage ((revenue - cost) / revenue * 100)
  * @param revenue Total revenue
  * @param cost Total cost
- * @returns Margin percentage rounded to 2 decimal places, or 0 if cost is 0
+ * @returns Margin percentage rounded to 2 decimal places, or 0 if revenue is 0
  */
-export function calculateMarginPercent(revenue: number, cost: number): number {
-  if (cost === 0) return 0;
+export function calculateMarginPercent(revenue: number | null | undefined, cost: number | null | undefined): number {
+  const revenueVal = revenue ?? 0;
+  const costVal = cost ?? 0;
   
-  const revenueDecimal = new Decimal(revenue);
-  const costDecimal = new Decimal(cost);
+  if (revenueVal === 0) return 0;
+  
+  const revenueDecimal = new Decimal(revenueVal);
+  const costDecimal = new Decimal(costVal);
   const margin = revenueDecimal.minus(costDecimal);
   
-  return margin.dividedBy(costDecimal).times(100).toDecimalPlaces(2).toNumber();
+  return margin.dividedBy(revenueDecimal).times(100).toDecimalPlaces(2).toNumber();
 }
 
 /**
@@ -42,11 +47,14 @@ export function calculateMarginPercent(revenue: number, cost: number): number {
  * @param quantity Total quantity
  * @returns Average price rounded to 2 decimal places, or 0 if quantity is 0
  */
-export function calculateAveragePrice(totalRevenue: number, quantity: number): number {
-  if (quantity === 0) return 0;
+export function calculateAveragePrice(totalRevenue: number | null | undefined, quantity: number | null | undefined): number {
+  const revenueVal = totalRevenue ?? 0;
+  const quantityVal = quantity ?? 0;
   
-  const revenueDecimal = new Decimal(totalRevenue);
-  const quantityDecimal = new Decimal(quantity);
+  if (quantityVal === 0) return 0;
+  
+  const revenueDecimal = new Decimal(revenueVal);
+  const quantityDecimal = new Decimal(quantityVal);
   
   return revenueDecimal.dividedBy(quantityDecimal).toDecimalPlaces(2).toNumber();
 }
@@ -57,11 +65,14 @@ export function calculateAveragePrice(totalRevenue: number, quantity: number): n
  * @param count Count
  * @returns Average value rounded to 2 decimal places, or 0 if count is 0
  */
-export function calculateAverage(total: number, count: number): number {
-  if (count === 0) return 0;
+export function calculateAverage(total: number | null | undefined, count: number | null | undefined): number {
+  const totalVal = total ?? 0;
+  const countVal = count ?? 0;
   
-  const totalDecimal = new Decimal(total);
-  const countDecimal = new Decimal(count);
+  if (countVal === 0) return 0;
+  
+  const totalDecimal = new Decimal(totalVal);
+  const countDecimal = new Decimal(countVal);
   
   return totalDecimal.dividedBy(countDecimal).toDecimalPlaces(2).toNumber();
 }
@@ -72,11 +83,14 @@ export function calculateAverage(total: number, count: number): number {
  * @param total Total
  * @returns Percentage rounded to 2 decimal places, or 0 if total is 0
  */
-export function calculatePercentageOfTotal(value: number, total: number): number {
-  if (total === 0) return 0;
+export function calculatePercentageOfTotal(value: number | null | undefined, total: number | null | undefined): number {
+  const valueVal = value ?? 0;
+  const totalVal = total ?? 0;
   
-  const valueDecimal = new Decimal(value);
-  const totalDecimal = new Decimal(total);
+  if (totalVal === 0) return 0;
+  
+  const valueDecimal = new Decimal(valueVal);
+  const totalDecimal = new Decimal(totalVal);
   
   return valueDecimal.dividedBy(totalDecimal).times(100).toDecimalPlaces(2).toNumber();
 }
@@ -87,8 +101,9 @@ export function calculatePercentageOfTotal(value: number, total: number): number
  * @param decimalPlaces Number of decimal places (default: 2)
  * @returns Rounded number
  */
-export function roundToDecimal(value: number, decimalPlaces: number = 2): number {
-  return new Decimal(value).toDecimalPlaces(decimalPlaces).toNumber();
+export function roundToDecimal(value: number | null | undefined, decimalPlaces: number = 2): number {
+  const val = value ?? 0;
+  return new Decimal(val).toDecimalPlaces(decimalPlaces).toNumber();
 }
 
 // Filter functions

@@ -4,9 +4,9 @@
   "description": "Mastra-powered AI agent for pricing and profitability analysis",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/examples/query-pricing-agent.ts",
-    "query": "tsx src/examples/interactive-query.ts",
-    "examples": "tsx src/examples/query-pricing-agent.ts",
+    "dev": "tsx src/mastra/examples/query-pricing-agent.ts",
+    "query": "tsx src/mastra/examples/interactive-query.ts",
+    "examples": "tsx src/mastra/examples/query-pricing-agent.ts",
     "playground": "npx mastra dev",
     "build": "tsc",
     "typecheck": "tsc --noEmit"

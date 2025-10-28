@@ -52,7 +52,7 @@ export function getExecutiveDashboard(
   const uniqueCustomers = new Set(transactions.map(t => t.customer_code)).size;
   const uniqueProducts = new Set(transactions.map(t => t.item_code)).size;
   const avgDiscountPercent = calculateAverage(
-    transactions.reduce((sum, t) => sum + t.discount_percent, 0),
+    transactions.reduce((sum, t) => sum + (t.discount_percent ?? 0), 0),
     transactionCount
   );
   
