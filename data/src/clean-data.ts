@@ -23,6 +23,7 @@ interface CleaningStats {
   negativeQtyOnInvFixed: number;
   priceRebatesMarked: number;
   fractionalQtyMarked: number;
+  currencyConverted: number;
 }
 
 class DataCleaner {
@@ -41,7 +42,8 @@ class DataCleaner {
       samplesMarked: 0,
       negativeQtyOnInvFixed: 0,
       priceRebatesMarked: 0,
-      fractionalQtyMarked: 0
+      fractionalQtyMarked: 0,
+      currencyConverted: 0
     };
   }
 
@@ -128,10 +130,68 @@ class DataCleaner {
   }
 
   /**
+   * Convert all currencies to EUR
+   * GBP values are multiplied by 1.15 (fixed exchange rate)
+   * Standardize currency values (Eur -> EUR)
+   */
+  private convertCurrency() {
+    console.log('\n=== Step 4: Converting Currencies to EUR ===\n');
+
+    const GBP_TO_EUR = 1.15;
+
+    // Check current currency distribution
+    const currencyDist = this.db.prepare(`
+      SELECT currency, COUNT(*) as count
+      FROM sales
+      GROUP BY currency
+    `).all() as Array<{ currency: string; count: number }>;
+
+    console.log('Current currency distribution:');
+    currencyDist.forEach(c => {
+      console.log(`  ${c.currency}: ${c.count} records`);
+    });
+
+    // Convert GBP to EUR (multiply unit_price and line_total by 1.15)
+    const gbpResult = this.db.prepare(`
+      UPDATE sales
+      SET 
+        unit_price = unit_price * ${GBP_TO_EUR},
+        line_total = line_total * ${GBP_TO_EUR},
+        currency = 'EUR'
+      WHERE currency = 'GBP'
+    `).run();
+
+    this.stats.currencyConverted = gbpResult.changes;
+    console.log(`✓ Converted ${gbpResult.changes} GBP transactions to EUR (1 GBP = ${GBP_TO_EUR} EUR)`);
+
+    // Standardize 'Eur' to 'EUR'
+    const eurResult = this.db.prepare(`
+      UPDATE sales
+      SET currency = 'EUR'
+      WHERE currency = 'Eur'
+    `).run();
+
+    console.log(`✓ Standardized ${eurResult.changes} 'Eur' records to 'EUR'`);
+
+    // Verify all records are now in EUR
+    const finalCheck = this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM sales
+      WHERE currency != 'EUR' OR currency IS NULL
+    `).get() as { count: number };
+
+    if (finalCheck.count > 0) {
+      console.log(`⚠ Warning: ${finalCheck.count} records still have non-EUR currency`);
+    } else {
+      console.log('✓ All transactions now in EUR');
+    }
+  }
+
+  /**
    * Apply business rules based on the provided table
    */
   private applyBusinessRules() {
-    console.log('\n=== Step 4: Applying Business Rules ===\n');
+    console.log('\n=== Step 5: Applying Business Rules ===\n');
 
     // Rule 1: Price < 0 on credit note → Keep as negative, mark as rebate
     console.log('Applying Rule 1: Price < 0 on credit note (rebate)...');
@@ -253,7 +313,7 @@ class DataCleaner {
    * Remove duplicate item codes from catalogue_prices
    */
   private removeDuplicatesCatalogue() {
-    console.log('\n=== Step 5: Removing Duplicate Item Codes (Catalogue) ===\n');
+    console.log('\n=== Step 6: Removing Duplicate Item Codes (Catalogue) ===\n');
 
     const duplicates = this.db.prepare(`
       SELECT item_code, COUNT(*) as count
@@ -294,7 +354,7 @@ class DataCleaner {
    * Remove duplicate item codes from landed_costs
    */
   private removeDuplicatesLanded() {
-    console.log('\n=== Step 6: Removing Duplicate Item Codes (Landed Costs) ===\n');
+    console.log('\n=== Step 7: Removing Duplicate Item Codes (Landed Costs) ===\n');
 
     const duplicates = this.db.prepare(`
       SELECT item_code, COUNT(*) as count
@@ -335,7 +395,7 @@ class DataCleaner {
    * Remove records with empty/NULL item codes from pallet_sizes
    */
   private removeEmptyPallets() {
-    console.log('\n=== Step 7: Removing Empty Item Codes (Pallet Sizes) ===\n');
+    console.log('\n=== Step 8: Removing Empty Item Codes (Pallet Sizes) ===\n');
 
     const result = this.db.prepare(`
       DELETE FROM pallet_sizes
@@ -350,7 +410,7 @@ class DataCleaner {
    * Standardize customer names by finding the most common name per customer_code
    */
   private standardizeCustomerNames() {
-    console.log('\n=== Step 8: Standardizing Customer Names ===\n');
+    console.log('\n=== Step 9: Standardizing Customer Names ===\n');
 
     const customerCodes = this.db.prepare(`
       SELECT DISTINCT customer_code
@@ -411,7 +471,7 @@ class DataCleaner {
    * Drop original columns and rename corrected columns
    */
   private finalizeCleanedColumns() {
-    console.log('\n=== Step 9: Finalizing Cleaned Columns ===\n');
+    console.log('\n=== Step 10: Finalizing Cleaned Columns ===\n');
 
     // Drop views that depend on the sales table
     console.log('Dropping views that depend on sales table...');
@@ -439,6 +499,7 @@ class DataCleaner {
         item_code TEXT,
         item_description TEXT,
         quantity REAL,
+        currency TEXT,
         unit_price REAL,
         line_total REAL,
         document_type TEXT,
@@ -457,12 +518,12 @@ class DataCleaner {
     this.db.prepare(`
       INSERT INTO sales_cleaned (
         id, invoice_number, invoice_date, customer_code, customer_name,
-        item_code, item_description, quantity, unit_price, line_total,
+        item_code, item_description, quantity, currency, unit_price, line_total,
         document_type, is_rebate, is_return, is_sample, unit_type, data_quality_issue
       )
       SELECT 
         id, invoice_number, invoice_date, customer_code, customer_name_standardized,
-        item_code, item_description, quantity_corrected, unit_price_corrected, line_total,
+        item_code, item_description, quantity_corrected, currency, unit_price_corrected, line_total,
         document_type, is_rebate, is_return, is_sample, unit_type, data_quality_issue
       FROM sales
     `).run();
@@ -555,7 +616,7 @@ class DataCleaner {
    * Generate a summary report
    */
   private generateReport() {
-    console.log('\n=== Step 10: Generating Summary Report ===\n');
+    console.log('\n=== Step 11: Generating Summary Report ===\n');
 
     const catalogueCount = this.db.prepare('SELECT COUNT(*) as count FROM catalogue_prices').get() as { count: number };
     const landedCount = this.db.prepare('SELECT COUNT(*) as count FROM landed_costs').get() as { count: number };
@@ -582,6 +643,14 @@ This report documents the data cleaning operations performed on the Voltura Grou
 |---------------|-------|-------------|
 | Invoice (INV) | ${invCount.count} | Regular sales transactions |
 | Credit Note (CRN) | ${crnCount.count} | Returns, rebates, and adjustments |
+
+## Currency Conversion
+
+**All values converted to EUR:**
+- GBP transactions converted: ${this.stats.currencyConverted}
+- Exchange rate applied: 1 GBP = 1.15 EUR
+- All prices and totals now in EUR for consistent analysis
+- Ensures accurate margin calculations with EUR-based costs
 
 ## Business Rules Applied
 
@@ -670,23 +739,22 @@ ${this.stats.customerNameMappings.length > 0 ? this.generateCustomerMappingTable
 | \`id\` | INTEGER | Primary key |
 | \`customer_code\` | TEXT | Customer identifier |
 | \`customer_name\` | TEXT | Standardized customer name |
-| \`region\` | TEXT | Customer region (IESER, IEWR, etc.) |
 | \`invoice_number\` | TEXT | Invoice or credit note number |
 | \`document_type\` | TEXT | 'INV' for Invoice, 'CRN' for Credit Note |
 | \`invoice_date\` | TEXT | Transaction date |
 | \`item_code\` | TEXT | Product identifier |
 | \`item_description\` | TEXT | Product description |
 | \`quantity\` | REAL | Corrected quantity (after DQ fixes) |
-| \`currency\` | TEXT | Transaction currency (GBP, EUR, etc.) |
-| \`unit_price\` | REAL | Corrected unit price (after DQ fixes) |
-| \`line_total\` | REAL | Total line value |
+| \`currency\` | TEXT | Transaction currency (always 'EUR' in cleaned data) |
+| \`unit_price\` | REAL | Corrected unit price in EUR (after DQ fixes and currency conversion) |
+| \`line_total\` | REAL | Total line value in EUR (after currency conversion) |
 | \`is_rebate\` | INTEGER | 1 if record is a rebate/margin adjustment |
 | \`is_return\` | INTEGER | 1 if record is a product return |
 | \`is_sample\` | INTEGER | 1 if record is a sample/free item |
 | \`unit_type\` | TEXT | 'meter' for fractional quantities, NULL otherwise |
 | \`data_quality_issue\` | TEXT | Description of any DQ issue found |
 
-**Note:** The cleaned database contains only corrected values. Original uncleaned data is preserved in \`voltura_data.db\`.
+**Note:** The cleaned database contains only corrected values with all amounts converted to EUR. Original uncleaned data is preserved in \`voltura_data.db\`.
 
 ## Usage Examples
 
@@ -798,6 +866,7 @@ const actualSales = db.prepare(\`
       this.copyDatabase();
       this.addBusinessRuleColumns();
       this.classifyDocumentTypes();
+      this.convertCurrency();
       this.applyBusinessRules();
       this.removeDuplicatesCatalogue();
       this.removeDuplicatesLanded();
@@ -812,6 +881,7 @@ const actualSales = db.prepare(\`
 
       console.log('📊 Cleaning Summary:');
       console.log(`   • Documents classified: INV + CRN`);
+      console.log(`   • Currency converted: ${this.stats.currencyConverted} GBP → EUR (rate: 1.15)`);
       console.log(`   • Rebates marked: ${this.stats.rebatesMarked + this.stats.priceRebatesMarked}`);
       console.log(`   • Returns marked: ${this.stats.returnsMarked}`);
       console.log(`   • Samples marked: ${this.stats.samplesMarked}`);

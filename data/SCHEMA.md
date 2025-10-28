@@ -69,10 +69,12 @@ Sales transaction records with complete order details.
 - `item_code` (TEXT) - Product SKU/code
 - `item_description` (TEXT) - Product description
 - `quantity` (INTEGER) - Number of units sold
-- `currency` (TEXT) - Transaction currency (GBP, EUR, Eur)
-- `unit_price` (REAL) - Price per unit
-- `line_total` (REAL) - Total line amount (quantity × unit_price - discount)
+- `currency` (TEXT) - Transaction currency (always EUR in cleaned database)
+- `unit_price` (REAL) - Price per unit in EUR
+- `line_total` (REAL) - Total line amount (quantity × unit_price - discount) in EUR
 - `created_at` (DATETIME) - Record creation timestamp
+
+**Currency Conversion:** In the cleaned database (`voltura_data_cleaned.db`), all GBP transactions have been converted to EUR using an exchange rate of 1 GBP = 1.15 EUR. This ensures all financial calculations (margins, costs, revenues) use the same currency base.
 
 **Note:** Discount percentages are not stored in the database but calculated dynamically by comparing `line_total` against catalogue prices (typically `ie_base`) using the formula: `((quantity × catalogue_price) - line_total) / (quantity × catalogue_price) × 100`
 
@@ -89,6 +91,8 @@ Sales transaction records with complete order details.
 
 **Note:** The cleaned database (`voltura_data_cleaned.db`) has these differences from the original:
 
+- **Currency conversion**: All GBP values converted to EUR (1 GBP = 1.15 EUR)
+- **Currency standardization**: `currency` column always contains 'EUR'
 - Includes `item_description` column (product description text)
 - `is_rebate` - Flag for rebate/margin adjustments
 - `is_return` - Flag for product returns
@@ -96,6 +100,7 @@ Sales transaction records with complete order details.
 - `unit_type` - Type indicator (e.g., 'meter' for fractional quantities)
 - `data_quality_issue` - Description of any data quality issues found
 - `customer_name` contains standardized customer names
+- All monetary values (`unit_price`, `line_total`) are in EUR
 
 ---
 
