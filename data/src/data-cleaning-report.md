@@ -17,6 +17,14 @@ This report documents the data cleaning operations performed on the Voltura Grou
 | Invoice (INV) | 673065 | Regular sales transactions |
 | Credit Note (CRN) | 63326 | Returns, rebates, and adjustments |
 
+## Currency Conversion
+
+**All values converted to EUR:**
+- GBP transactions converted: 729844
+- Exchange rate applied: 1 GBP = 1.15 EUR
+- All prices and totals now in EUR for consistent analysis
+- Ensures accurate margin calculations with EUR-based costs
+
 ## Business Rules Applied
 
 ### 1. Price Handling
@@ -104,29 +112,6 @@ The following columns were added to track corrections:
 *Showing top 10 of 196 customer codes with variations.*
 
 
-## New Column Validation
-
-### Sales Table - Additional Columns
-
-**Region:**
-- Unique values: 7 (IEHA, IEKAR, IENI, IENR, IESC, IESER, IEWR)
-- Missing values: 0 records
-
-**Currency:**
-- Unique values: 3 (EUR, Eur, GBP)
-- Missing values: 0 records
-
-**Item Description:**
-- Missing values: 0 records
-
-### Customer Table - Additional Columns
-
-**Buying Group:**
-- Missing values: 0 records
-
-**Account Manager:**
-- Missing values: 0 records
-
 ## Final Table Statistics
 
 | Table | Record Count |
@@ -144,24 +129,22 @@ The following columns were added to track corrections:
 | `id` | INTEGER | Primary key |
 | `customer_code` | TEXT | Customer identifier |
 | `customer_name` | TEXT | Standardized customer name |
-| `region` | TEXT | Customer region (IESER, IEWR, etc.) |
 | `invoice_number` | TEXT | Invoice or credit note number |
 | `document_type` | TEXT | 'INV' for Invoice, 'CRN' for Credit Note |
 | `invoice_date` | TEXT | Transaction date |
 | `item_code` | TEXT | Product identifier |
 | `item_description` | TEXT | Product description |
 | `quantity` | REAL | Corrected quantity (after DQ fixes) |
-| `currency` | TEXT | Transaction currency (GBP, EUR, etc.) |
-| `unit_price` | REAL | Corrected unit price (after DQ fixes) |
-| `discount_percent` | REAL | Discount percentage applied |
-| `line_total` | REAL | Total line value |
+| `currency` | TEXT | Transaction currency (always 'EUR' in cleaned data) |
+| `unit_price` | REAL | Corrected unit price in EUR (after DQ fixes and currency conversion) |
+| `line_total` | REAL | Total line value in EUR (after currency conversion) |
 | `is_rebate` | INTEGER | 1 if record is a rebate/margin adjustment |
 | `is_return` | INTEGER | 1 if record is a product return |
 | `is_sample` | INTEGER | 1 if record is a sample/free item |
 | `unit_type` | TEXT | 'meter' for fractional quantities, NULL otherwise |
 | `data_quality_issue` | TEXT | Description of any DQ issue found |
 
-**Note:** The cleaned database contains only corrected values. Original uncleaned data is preserved in `voltura_data.db`.
+**Note:** The cleaned database contains only corrected values with all amounts converted to EUR. Original uncleaned data is preserved in `voltura_data.db`.
 
 ## Usage Examples
 

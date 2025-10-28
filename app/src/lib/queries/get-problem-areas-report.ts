@@ -1,6 +1,8 @@
-import { getDb, getDefaultDateRange } from '../database';
-import { getNegativeMarginsByCustomer } from './get-negative-margins-by-customer';
-import { getNegativeMarginsBySKU } from './get-negative-margins-by-sku';
+import { getSalesTransactions } from './base-queries/sales-transactions';
+import { getCustomerSales } from './base-queries/customer-sales';
+import { getCustomerProfitability } from './get-customer-profitability';
+import { getProductPerformance } from './get-product-performance';
+import { calculateMargin, filterHighDiscounts, sortByField, limitResults } from './utils/calculations';
 
 export interface ProblemAreasReport {
   negative_margin_customers: Array<{ customer_code: string; customer_name: string; margin: number }>;
@@ -27,72 +29,117 @@ export function getProblemAreasReport(
   startDate?: string,
   endDate?: string
 ): ProblemAreasReport {
-  const dateRange = startDate && endDate ? { startDate, endDate } : getDefaultDateRange();
-  const db = getDb();
-  
   // Top 10 negative margin customers
-  const negativeCustomers = getNegativeMarginsByCustomer(startDate, endDate, false)
-    .slice(0, 10)
-    .map(c => ({
-      customer_code: c.customer_code,
-      customer_name: c.customer_name,
-      margin: c.total_margin
-    }));
+  // Include returns and credit notes to capture true margin erosion
+  const negativeCustomers = getCustomerProfitability({
+    startDate,
+    endDate,
+    includeReturns: true,
+    maxMarginPercent: 0,
+    sortBy: 'margin',
+    order: 'asc',
+    limit: 10
+  }).map(c => ({
+    customer_code: c.customer_code,
+    customer_name: c.customer_name,
+    margin: c.gross_margin
+  }));
   
   // Top 10 negative margin products
-  const negativeProducts = getNegativeMarginsBySKU(startDate, endDate, 1)
-    .slice(0, 10)
-    .map(p => ({
-      item_code: p.item_code,
-      product_description: p.product_description,
-      margin: p.total_margin
-    }));
+  // Product performance now includes returns by default for accurate margin calculation
+  const negativeProducts = getProductPerformance({
+    startDate,
+    endDate,
+    maxMarginPercent: 0,
+    minTransactions: 1,
+    sortBy: 'margin',
+    order: 'asc',
+    limit: 10
+  }).map(p => ({
+    item_code: p.item_code,
+    product_description: p.product_description,
+    margin: p.margin
+  }));
   
   // High discount transactions (>20%)
-  const highDiscountQuery = `
-    SELECT 
-      invoice_number,
-      customer_code,
-      item_code,
-      discount_percent,
-      ROUND(line_total - (quantity * COALESCE(lc.landed_cost_euro, 0)), 2) as margin
-    FROM sales s
-    LEFT JOIN landed_costs lc ON s.item_code = lc.item_code
-    WHERE document_type = 'INV'
-      AND is_sample = 0
-      AND is_return = 0
-      AND discount_percent > 20
-      AND invoice_date BETWEEN ? AND ?
-    ORDER BY discount_percent DESC
-    LIMIT 10
-  `;
+  const transactions = getSalesTransactions({
+    startDate,
+    endDate,
+    includeReturns: false,
+    includeSamples: false,
+    documentTypes: ['INV']
+  });
   
-  const highDiscounts = db.prepare(highDiscountQuery).all(dateRange.startDate, dateRange.endDate) as any[];
+  const transactionsWithMargin = transactions.map(t => {
+    const cost = (t.landed_cost_euro ?? 0) * t.quantity;
+    return {
+      invoice_number: t.invoice_number,
+      customer_code: t.customer_code,
+      item_code: t.item_code,
+      discount_percent: t.discount_percent,
+      margin: calculateMargin(t.line_total, cost)
+    };
+  });
+  
+  const highDiscounts = limitResults(
+    sortByField(
+      filterHighDiscounts(transactionsWithMargin, 20),
+      'discount_percent',
+      'desc'
+    ),
+    10
+  );
   
   // Inactive high-value customers (>90 days no purchase, >€10k lifetime)
-  const inactiveQuery = `
-    SELECT 
-      customer_code,
-      customer_name,
-      CAST(julianday('now') - julianday(MAX(invoice_date)) AS INTEGER) as days_inactive,
-      ROUND(SUM(line_total), 2) as lifetime_revenue
-    FROM sales
-    WHERE document_type = 'INV'
-      AND is_sample = 0
-      AND is_return = 0
-    GROUP BY customer_code, customer_name
-    HAVING days_inactive > 90 AND lifetime_revenue > 10000
-    ORDER BY lifetime_revenue DESC
-    LIMIT 10
-  `;
+  // Get all customer sales (lifetime, not filtered by date)
+  const allCustomerSales = getCustomerSales({
+    includeSamples: false,
+    includeReturns: false
+  });
   
-  const inactiveCustomers = db.prepare(inactiveQuery).all() as any[];
+  // Get last transaction date for each customer
+  const allTransactions = getSalesTransactions({
+    includeSamples: false,
+    includeReturns: false,
+    documentTypes: ['INV']
+  });
+  
+  const customerLastTransaction = new Map<string, string>();
+  allTransactions.forEach(t => {
+    const lastDate = customerLastTransaction.get(t.customer_code);
+    if (!lastDate || t.invoice_date > lastDate) {
+      customerLastTransaction.set(t.customer_code, t.invoice_date);
+    }
+  });
+  
+  const now = new Date();
+  const inactiveCustomers = allCustomerSales
+    .map(customer => {
+      const lastTransactionDate = customerLastTransaction.get(customer.customer_code);
+      if (!lastTransactionDate) return null;
+      
+      const lastDate = new Date(lastTransactionDate);
+      const daysInactive = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      return {
+        customer_code: customer.customer_code,
+        customer_name: customer.customer_name,
+        days_inactive: daysInactive,
+        lifetime_revenue: customer.total_revenue
+      };
+    })
+    .filter((c): c is NonNullable<typeof c> => c !== null)
+    .filter(c => c.days_inactive > 90 && c.lifetime_revenue > 10000);
+  
+  const inactiveHighValue = limitResults(
+    sortByField(inactiveCustomers, 'lifetime_revenue', 'desc'),
+    10
+  );
   
   return {
     negative_margin_customers: negativeCustomers,
     negative_margin_products: negativeProducts,
     high_discount_transactions: highDiscounts,
-    inactive_high_value_customers: inactiveCustomers
+    inactive_high_value_customers: inactiveHighValue
   };
 }
-

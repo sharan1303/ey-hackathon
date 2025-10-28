@@ -1,4 +1,5 @@
-import { getDb, getDefaultDateRange } from '../database';
+import { getCustomerSales } from './base-queries/customer-sales';
+import { calculateMargin, calculateMarginPercent, calculateAverage, sortByField, limitResults } from './utils/calculations';
 
 export interface CustomerProfitability {
   customer_code: string;
@@ -13,56 +14,109 @@ export interface CustomerProfitability {
   total_quantity: number;
 }
 
+export interface CustomerProfitabilityFilters {
+  startDate?: string;
+  endDate?: string;
+  includeReturns?: boolean;  // Default true to include returns/credit notes in margin calculations
+  sortBy?: 'margin' | 'revenue' | 'margin_percent';
+  limit?: number;
+  order?: 'asc' | 'desc';
+  minMarginPercent?: number;
+  maxMarginPercent?: number;
+  minRevenue?: number;
+  minTransactions?: number;
+}
+
 /**
  * Get customer profitability ranking
  */
 export function getCustomerProfitability(
   startDate?: string,
   endDate?: string,
-  includeReturns = false,
+  includeReturns?: boolean,
+  sortBy?: 'margin' | 'revenue' | 'margin_percent',
+  limit?: number,
+  order?: 'asc' | 'desc'
+): CustomerProfitability[];
+export function getCustomerProfitability(
+  filters: CustomerProfitabilityFilters
+): CustomerProfitability[];
+export function getCustomerProfitability(
+  startDateOrFilters?: string | CustomerProfitabilityFilters,
+  endDate?: string,
+  includeReturns = true,
   sortBy: 'margin' | 'revenue' | 'margin_percent' = 'margin',
   limit = 100,
   order: 'asc' | 'desc' = 'desc'
 ): CustomerProfitability[] {
-  const dateRange = startDate && endDate ? { startDate, endDate } : getDefaultDateRange();
+  // Handle both function signatures
+  let filters: CustomerProfitabilityFilters;
+  if (typeof startDateOrFilters === 'object') {
+    filters = startDateOrFilters;
+  } else {
+    filters = {
+      startDate: startDateOrFilters,
+      endDate,
+      includeReturns,
+      sortBy,
+      limit,
+      order
+    };
+  }
   
-  const sortColumn = {
+  const {
+    startDate,
+    endDate: filterEndDate,
+    includeReturns: filterReturns = false,
+    sortBy: filterSortBy = 'margin',
+    limit: filterLimit = 100,
+    order: filterOrder = 'desc',
+    minMarginPercent,
+    maxMarginPercent,
+    minRevenue,
+    minTransactions
+  } = filters;
+  
+  // Get base customer sales data with SQL-level filters
+  const customerSales = getCustomerSales({
+    startDate,
+    endDate: filterEndDate,
+    includeReturns: filterReturns,
+    includeSamples: false,
+    minRevenue,
+    minTransactions
+  });
+  
+  // Calculate margins and transform data
+  let customersWithMetrics: CustomerProfitability[] = customerSales.map(customer => ({
+    customer_code: customer.customer_code,
+    customer_name: customer.customer_name,
+    total_revenue: customer.total_revenue,
+    total_cost: customer.total_cost,
+    gross_margin: calculateMargin(customer.total_revenue, customer.total_cost),
+    margin_percent: calculateMarginPercent(customer.total_revenue, customer.total_cost),
+    transaction_count: customer.transaction_count,
+    unique_products: customer.unique_products,
+    avg_order_value: calculateAverage(customer.total_revenue, customer.transaction_count),
+    total_quantity: customer.total_quantity
+  }));
+  
+  // Apply margin percent filters
+  if (minMarginPercent !== undefined) {
+    customersWithMetrics = customersWithMetrics.filter(c => c.margin_percent >= minMarginPercent);
+  }
+  if (maxMarginPercent !== undefined) {
+    customersWithMetrics = customersWithMetrics.filter(c => c.margin_percent <= maxMarginPercent);
+  }
+  
+  // Map sortBy parameter to field name
+  const sortField: keyof CustomerProfitability = {
     margin: 'gross_margin',
     revenue: 'total_revenue',
     margin_percent: 'margin_percent'
-  }[sortBy];
+  }[filterSortBy] as keyof CustomerProfitability;
   
-  const sortOrder = order.toUpperCase();
-  
-  const query = `
-    SELECT 
-      s.customer_code,
-      s.customer_name,
-      ROUND(SUM(s.line_total), 2) as total_revenue,
-      ROUND(SUM(s.quantity * COALESCE(lc.landed_cost_euro, 0)), 2) as total_cost,
-      ROUND(SUM(s.line_total - (s.quantity * COALESCE(lc.landed_cost_euro, 0))), 2) as gross_margin,
-      ROUND(
-        (SUM(s.line_total - (s.quantity * COALESCE(lc.landed_cost_euro, 0))) / 
-         NULLIF(SUM(s.quantity * COALESCE(lc.landed_cost_euro, 1)), 0)) * 100,
-        2
-      ) as margin_percent,
-      COUNT(*) as transaction_count,
-      COUNT(DISTINCT s.item_code) as unique_products,
-      ROUND(AVG(s.line_total), 2) as avg_order_value,
-      SUM(s.quantity) as total_quantity
-    FROM sales s
-    LEFT JOIN landed_costs lc ON s.item_code = lc.item_code
-    WHERE s.document_type = 'INV' 
-      AND s.is_sample = 0
-      ${includeReturns ? '' : 'AND s.is_return = 0'}
-      AND s.invoice_date BETWEEN ? AND ?
-      AND s.customer_code IS NOT NULL
-    GROUP BY s.customer_code, s.customer_name
-    ORDER BY ${sortColumn} ${sortOrder}
-    LIMIT ?
-  `;
-  
-  const db = getDb();
-  return db.prepare(query).all(dateRange.startDate, dateRange.endDate, limit) as CustomerProfitability[];
+  // Sort and limit
+  const sorted = sortByField(customersWithMetrics, sortField, filterOrder);
+  return limitResults(sorted, filterLimit);
 }
-

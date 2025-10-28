@@ -1,5 +1,8 @@
-import { getDb, getDefaultDateRange } from '../database';
-import { getNegativeMarginsByCustomer } from './get-negative-margins-by-customer';
+import { getSalesTransactions } from './base-queries/sales-transactions';
+import { getCustomerSales } from './base-queries/customer-sales';
+import { getCustomerProfitability } from './get-customer-profitability';
+import { calculateMargin, calculateMarginPercent, calculateAverage, calculatePercentageOfTotal, sortByField, limitResults } from './utils/calculations';
+import Decimal from 'decimal.js-light';
 
 export interface ExecutiveDashboard {
   total_revenue: number;
@@ -24,91 +27,95 @@ export function getExecutiveDashboard(
   startDate?: string,
   endDate?: string
 ): ExecutiveDashboard {
-  const dateRange = startDate && endDate ? { startDate, endDate } : getDefaultDateRange();
-  const db = getDb();
+  // Get all non-return, non-sample transactions
+  const transactions = getSalesTransactions({
+    startDate,
+    endDate,
+    includeReturns: false,
+    includeSamples: false,
+    documentTypes: ['INV']
+  });
   
-  // Main metrics
-  const mainQuery = `
-    SELECT 
-      ROUND(SUM(s.line_total), 2) as total_revenue,
-      ROUND(SUM(s.quantity * COALESCE(lc.landed_cost_euro, 0)), 2) as total_cost,
-      ROUND(SUM(s.line_total - (s.quantity * COALESCE(lc.landed_cost_euro, 0))), 2) as gross_margin,
-      ROUND(
-        (SUM(s.line_total - (s.quantity * COALESCE(lc.landed_cost_euro, 0))) / 
-         NULLIF(SUM(s.quantity * COALESCE(lc.landed_cost_euro, 1)), 0)) * 100,
-        2
-      ) as gross_margin_percent,
-      COUNT(*) as transaction_count,
-      COUNT(DISTINCT s.customer_code) as unique_customers,
-      COUNT(DISTINCT s.item_code) as unique_products,
-      ROUND(AVG(s.line_total), 2) as avg_order_value,
-      ROUND(AVG(s.discount_percent), 2) as avg_discount_percent
-    FROM sales s
-    LEFT JOIN landed_costs lc ON s.item_code = lc.item_code
-    WHERE s.document_type = 'INV' 
-      AND s.is_sample = 0
-      AND s.is_return = 0
-      AND s.invoice_date BETWEEN ? AND ?
-  `;
+  // Calculate main metrics
+  const totalRevenue = transactions.reduce((sum, t) => {
+    const lineTotal = t.line_total ?? 0;
+    return new Decimal(sum).plus(lineTotal).toNumber();
+  }, 0);
   
-  const main = db.prepare(mainQuery).get(dateRange.startDate, dateRange.endDate) as any;
+  const totalCost = transactions.reduce((sum, t) => {
+    const cost = t.landed_cost_euro ?? 0;
+    const quantity = t.quantity ?? 0;
+    return new Decimal(sum).plus(new Decimal(quantity).times(cost)).toNumber();
+  }, 0);
   
-  // Top 10 customer concentration
-  const concentrationQuery = `
-    SELECT 
-      ROUND((SUM(line_total) * 100.0 / (
-        SELECT SUM(line_total) 
-        FROM sales 
-        WHERE document_type = 'INV' 
-          AND is_sample = 0 
-          AND is_return = 0
-          AND invoice_date BETWEEN ? AND ?
-      )), 2) as concentration_percent
-    FROM (
-      SELECT SUM(line_total) as line_total
-      FROM sales
-      WHERE document_type = 'INV' 
-        AND is_sample = 0
-        AND is_return = 0
-        AND invoice_date BETWEEN ? AND ?
-      GROUP BY customer_code
-      ORDER BY line_total DESC
-      LIMIT 10
-    )
-  `;
+  const transactionCount = transactions.length;
+  const uniqueCustomers = new Set(transactions.map(t => t.customer_code)).size;
+  const uniqueProducts = new Set(transactions.map(t => t.item_code)).size;
+  const avgDiscountPercent = calculateAverage(
+    transactions.reduce((sum, t) => sum + t.discount_percent, 0),
+    transactionCount
+  );
   
-  const concentration = db.prepare(concentrationQuery).get(
-    dateRange.startDate, dateRange.endDate,
-    dateRange.startDate, dateRange.endDate
-  ) as any;
+  // Calculate top 10 customer concentration
+  const customerSales = getCustomerSales({
+    startDate,
+    endDate,
+    includeReturns: false,
+    includeSamples: false
+  });
   
-  // Negative margin metrics
-  const negativeMargins = getNegativeMarginsByCustomer(startDate, endDate, false);
-  const negative_margin_customers_count = negativeMargins.length;
-  const negative_margin_amount = negativeMargins.reduce((sum, c) => sum + c.total_margin, 0);
+  const top10Customers = limitResults(
+    sortByField(customerSales, 'total_revenue', 'desc'),
+    10
+  );
   
-  // Return rate
-  const returnQuery = `
-    SELECT 
-      ROUND(
-        (SUM(CASE WHEN is_return = 1 THEN ABS(line_total) ELSE 0 END) * 100.0 / 
-         NULLIF(SUM(CASE WHEN is_return = 0 THEN line_total ELSE 0 END), 0)),
-        2
-      ) as return_rate_percent
-    FROM sales
-    WHERE document_type IN ('INV', 'CN')
-      AND is_sample = 0
-      AND invoice_date BETWEEN ? AND ?
-  `;
+  const top10Revenue = top10Customers.reduce((sum, c) => sum + c.total_revenue, 0);
+  const top10ConcentrationPercent = calculatePercentageOfTotal(top10Revenue, totalRevenue);
   
-  const returnRate = db.prepare(returnQuery).get(dateRange.startDate, dateRange.endDate) as any;
+  // Negative margin metrics - include returns for accurate margin erosion
+  const negativeMargins = getCustomerProfitability({
+    startDate,
+    endDate,
+    includeReturns: true,
+    maxMarginPercent: 0,
+    sortBy: 'margin',
+    order: 'asc'
+  });
+  const negativeMarginCustomersCount = negativeMargins.length;
+  const negativeMarginAmount = negativeMargins.reduce((sum, c) => sum + c.gross_margin, 0);
+  
+  // Return rate calculation
+  const allTransactions = getSalesTransactions({
+    startDate,
+    endDate,
+    includeReturns: true,
+    includeSamples: false,
+    documentTypes: ['INV', 'CN']
+  });
+  
+  const returnAmount = allTransactions
+    .filter(t => t.is_return === 1)
+    .reduce((sum, t) => sum + Math.abs(t.line_total), 0);
+  
+  const salesAmount = allTransactions
+    .filter(t => t.is_return === 0)
+    .reduce((sum, t) => sum + t.line_total, 0);
+  
+  const returnRatePercent = calculatePercentageOfTotal(returnAmount, salesAmount);
   
   return {
-    ...main,
-    top_10_customer_concentration_percent: concentration?.concentration_percent || 0,
-    negative_margin_customers_count,
-    negative_margin_amount: Math.round(negative_margin_amount * 100) / 100,
-    return_rate_percent: returnRate?.return_rate_percent || 0
+    total_revenue: totalRevenue,
+    total_cost: totalCost,
+    gross_margin: calculateMargin(totalRevenue, totalCost),
+    gross_margin_percent: calculateMarginPercent(totalRevenue, totalCost),
+    transaction_count: transactionCount,
+    unique_customers: uniqueCustomers,
+    unique_products: uniqueProducts,
+    avg_order_value: calculateAverage(totalRevenue, transactionCount),
+    top_10_customer_concentration_percent: top10ConcentrationPercent,
+    negative_margin_customers_count: negativeMarginCustomersCount,
+    negative_margin_amount: negativeMarginAmount,
+    return_rate_percent: returnRatePercent,
+    avg_discount_percent: avgDiscountPercent
   };
 }
-
