@@ -38,8 +38,8 @@ export function getProductSales(filters: ProductSalesFilters = {}): ProductSales
     : getDefaultDateRange();
   
   const {
-    includeReturns = false,
-    includeSamples = false,
+    includeReturns = true,
+    includeSamples = true,
     itemCodes,
     minRevenue,
     maxRevenue,
@@ -54,9 +54,9 @@ export function getProductSales(filters: ProductSalesFilters = {}): ProductSales
   const params: any[] = [];
   const havingConditions: string[] = [];
   
-  // WHERE clause conditions
-  conditions.push('s.document_type = ?');
-  params.push('INV');
+  // WHERE clause conditions - include both invoices and credit notes
+  conditions.push('s.document_type IN (?, ?)');
+  params.push('INV', 'CRN');
   
   if (!includeSamples) {
     conditions.push('s.is_sample = 0');

@@ -73,11 +73,12 @@ export function getProductPerformance(
   } = filters;
   
   // Get base product sales data with SQL-level filters
+  // Include returns and credit notes for accurate margin erosion calculation
   const productSales = getProductSales({
     startDate,
     endDate: filterEndDate,
-    includeReturns: false,
-    includeSamples: false,
+    includeReturns: true,
+    includeSamples: true,
     minRevenue,
     minTransactions
   });

@@ -45,9 +45,9 @@ export function getSalesTransactions(filters: SalesTransactionFilters = {}): Sal
     : getDefaultDateRange();
   
   const {
-    includeReturns = false,
-    includeSamples = false,
-    documentTypes = ['INV'],
+    includeReturns = true,
+    includeSamples = true,
+    documentTypes = ['INV', 'CRN'],
     customerCode,
     customerCodes,
     itemCode,

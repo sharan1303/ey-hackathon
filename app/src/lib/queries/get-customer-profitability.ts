@@ -17,7 +17,7 @@ export interface CustomerProfitability {
 export interface CustomerProfitabilityFilters {
   startDate?: string;
   endDate?: string;
-  includeReturns?: boolean;
+  includeReturns?: boolean;  // Default true to include returns/credit notes in margin calculations
   sortBy?: 'margin' | 'revenue' | 'margin_percent';
   limit?: number;
   order?: 'asc' | 'desc';
@@ -44,7 +44,7 @@ export function getCustomerProfitability(
 export function getCustomerProfitability(
   startDateOrFilters?: string | CustomerProfitabilityFilters,
   endDate?: string,
-  includeReturns = false,
+  includeReturns = true,
   sortBy: 'margin' | 'revenue' | 'margin_percent' = 'margin',
   limit = 100,
   order: 'asc' | 'desc' = 'desc'

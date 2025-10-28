@@ -35,8 +35,8 @@ export function getCustomerSales(filters: CustomerSalesFilters = {}): CustomerSa
     : getDefaultDateRange();
   
   const {
-    includeReturns = false,
-    includeSamples = false,
+    includeReturns = true,
+    includeSamples = true,
     customerCodes,
     minRevenue,
     maxRevenue,
@@ -50,9 +50,9 @@ export function getCustomerSales(filters: CustomerSalesFilters = {}): CustomerSa
   const params: any[] = [];
   const havingConditions: string[] = [];
   
-  // WHERE clause conditions
-  conditions.push('s.document_type = ?');
-  params.push('INV');
+  // WHERE clause conditions - include both invoices and credit notes
+  conditions.push('s.document_type IN (?, ?)');
+  params.push('INV', 'CRN');
   
   if (!includeSamples) {
     conditions.push('s.is_sample = 0');

@@ -30,10 +30,11 @@ export function getProblemAreasReport(
   endDate?: string
 ): ProblemAreasReport {
   // Top 10 negative margin customers
+  // Include returns and credit notes to capture true margin erosion
   const negativeCustomers = getCustomerProfitability({
     startDate,
     endDate,
-    includeReturns: false,
+    includeReturns: true,
     maxMarginPercent: 0,
     sortBy: 'margin',
     order: 'asc',
@@ -45,6 +46,7 @@ export function getProblemAreasReport(
   }));
   
   // Top 10 negative margin products
+  // Product performance now includes returns by default for accurate margin calculation
   const negativeProducts = getProductPerformance({
     startDate,
     endDate,

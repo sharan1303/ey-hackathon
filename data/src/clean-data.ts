@@ -508,7 +508,7 @@ class DataCleaner {
     `).run();
     console.log('✓ Recreated view: vw_product_pricing');
 
-    // vw_sales_by_customer
+    // vw_sales_by_customer - includes all transactions for accurate margin tracking
     this.db.prepare(`
       CREATE VIEW vw_sales_by_customer AS
       SELECT 
@@ -518,15 +518,11 @@ class DataCleaner {
         SUM(quantity) as total_quantity,
         SUM(line_total) as total_revenue
       FROM sales
-      WHERE document_type = 'INV'
-        AND is_return = 0
-        AND is_rebate = 0
-        AND is_sample = 0
       GROUP BY customer_code, customer_name
     `).run();
     console.log('✓ Recreated view: vw_sales_by_customer');
 
-    // vw_sales_by_product
+    // vw_sales_by_product - includes all transactions for accurate margin tracking
     this.db.prepare(`
       CREATE VIEW vw_sales_by_product AS
       SELECT 
@@ -536,15 +532,11 @@ class DataCleaner {
         SUM(line_total) as total_revenue,
         AVG(unit_price) as avg_price
       FROM sales
-      WHERE document_type = 'INV'
-        AND is_return = 0
-        AND is_rebate = 0
-        AND is_sample = 0
       GROUP BY item_code
     `).run();
     console.log('✓ Recreated view: vw_sales_by_product');
 
-    // vw_monthly_sales
+    // vw_monthly_sales - includes all transactions for accurate margin tracking
     this.db.prepare(`
       CREATE VIEW vw_monthly_sales AS
       SELECT 
@@ -553,10 +545,6 @@ class DataCleaner {
         SUM(quantity) as total_quantity,
         SUM(line_total) as total_revenue
       FROM sales
-      WHERE document_type = 'INV'
-        AND is_return = 0
-        AND is_rebate = 0
-        AND is_sample = 0
       GROUP BY strftime('%Y-%m', invoice_date)
     `).run();
     console.log('✓ Recreated view: vw_monthly_sales');

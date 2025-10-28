@@ -72,11 +72,11 @@ export function getExecutiveDashboard(
   const top10Revenue = top10Customers.reduce((sum, c) => sum + c.total_revenue, 0);
   const top10ConcentrationPercent = calculatePercentageOfTotal(top10Revenue, totalRevenue);
   
-  // Negative margin metrics
+  // Negative margin metrics - include returns for accurate margin erosion
   const negativeMargins = getCustomerProfitability({
     startDate,
     endDate,
-    includeReturns: false,
+    includeReturns: true,
     maxMarginPercent: 0,
     sortBy: 'margin',
     order: 'asc'
