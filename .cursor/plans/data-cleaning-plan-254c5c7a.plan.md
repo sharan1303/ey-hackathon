@@ -67,8 +67,8 @@ Create a TypeScript script `data/src/clean-data.ts` that:
 
 ## Files to Create
 
-- **New:** `data/clean-data.ts` - Main cleaning script that creates and cleans new database
-- **New:** `data/data-cleaning-report.md` - Summary report of cleaning operations
+- **New:** `data/src/clean-data.ts` - Main cleaning script that creates and cleans new database
+- **New:** `data/spec/data-cleaning-report.md` - Summary report of cleaning operations
 
 ### To-dos
 
