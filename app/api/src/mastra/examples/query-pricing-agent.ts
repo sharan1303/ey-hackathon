@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { pricingAgent } from '../mastra';
+import { pricingAgent } from '..';
 
 /**
  * Logging callback for agent steps

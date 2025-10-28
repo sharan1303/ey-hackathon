@@ -1,6 +1,6 @@
 import { Mastra } from '@mastra/core';
 import { PinoLogger } from '@mastra/loggers';
-import { pricingAgent } from '../agents/pricing-agent';
+import { pricingAgent } from './agents/pricing-agent';
 
 export const mastra = new Mastra({
   agents: {
