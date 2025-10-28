@@ -144,19 +144,24 @@ class DataImporter {
 
           const insertStmt = this.db.prepare(`
             INSERT INTO sales (
-              invoice_number, invoice_date, customer_code, customer_name,
-              item_code, quantity, unit_price, discount_percent, line_total
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              customer_code, customer_name, region, invoice_number, document_type,
+              invoice_date, item_code, item_description, quantity, currency,
+              unit_price, line_total
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `);
 
           const insertMany = this.db.transaction((rows: CsvRow[]) => {
             for (const row of rows) {
-              const invoiceNumber = row['Document Number'] || null;
-              const invoiceDateRaw = row['Document Date'];
               const customerCode = row['Customer Code'] || null;
               const customerName = row['Customer Name'] || null;
+              const region = row['Region'] || null;
+              const invoiceNumber = row['Document Number'] || null;
+              const documentType = row['Document Type'] || null;
+              const invoiceDateRaw = row['Document Date'];
               const itemCode = row['Item SKU'] || null;
+              const itemDescription = row['Item Description'] || null;
               const quantityStr = row['Item Quantity'];
+              const currency = row['Currency'] || null;
               const priceStr = row['Price'];
               
               // Convert date from DD/MM/YYYY to YYYY-MM-DD
@@ -180,14 +185,17 @@ class DataImporter {
                 : null;
               
               insertStmt.run(
-                invoiceNumber,
-                invoiceDate,
                 customerCode,
                 customerName,
+                region,
+                invoiceNumber,
+                documentType,
+                invoiceDate,
                 itemCode,
+                itemDescription,
                 quantity,
+                currency,
                 unitPrice,
-                null, // discount_percent
                 lineTotal
               );
             }
@@ -303,19 +311,17 @@ class DataImporter {
     console.log('\n--- Importing Excel Files ---\n');
 
     // Import customer product keys
-    // Note: This file actually contains customer master data, not customer-product mappings
-    // The file has: Code, Name, Buying Group, Region, Account Manager
-    // But our schema expects: customer_code, customer_name, item_code, product_description
-    // We'll map the customer data and leave item_code and product_description as null
-    console.log('Importing customer product keys...');
-    console.log('⚠️  Note: File contains customer master data only (no product mapping)');
+    // Note: Despite the filename, this file contains customer master data only
+    console.log('Importing customer master data...');
     const customerKeyCount = this.importExcelFile(
       path.join(DATA_DIR, 'Voltura Group Customer_Product Key.xlsx'),
       'customer_product_keys',
       {
         customer_code: 'Code',
-        customer_name: 'Name'
-        // item_code and product_description will be null as they don't exist in this file
+        customer_name: 'Name',
+        buying_group: 'Buying Group',
+        region: 'Region',
+        account_manager: 'Account Manager'
       }
     );
     console.log(`✓ Imported ${customerKeyCount} customer records\n`);
@@ -327,8 +333,9 @@ class DataImporter {
       'pallet_sizes',
       {
         item_code: 'ITEM CODE',
-        pallet_quantity: 'Pallet Quantity'
-        // description column doesn't exist in the file, will be null
+        pallet_quantity: 'Pallet Quantity',
+        carton_quantity: 'Carton Quantity ',  // Note: trailing space in the source column name
+        single_quantity: 'Single Quantity'
       }
     );
     console.log(`✓ Imported ${palletCount} pallet size records\n`);

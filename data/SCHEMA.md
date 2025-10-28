@@ -60,16 +60,21 @@ Sales transaction records with complete order details.
 **Columns:**
 
 - `id` (INTEGER, PRIMARY KEY) - Auto-incrementing unique identifier
-- `invoice_number` (TEXT) - Invoice reference number
-- `invoice_date` (TEXT) - Date of invoice (YYYY-MM-DD format)
 - `customer_code` (TEXT) - Customer identifier
 - `customer_name` (TEXT) - Customer name
+- `region` (TEXT) - Customer region (e.g., IESER, IEWR, IEHA, IENI, IENR, IESC, IEKAR)
+- `invoice_number` (TEXT) - Invoice reference number (also called Document Number)
+- `document_type` (TEXT) - Transaction type (CRN for Credit Note, INV for Invoice)
+- `invoice_date` (TEXT) - Date of invoice (YYYY-MM-DD format)
 - `item_code` (TEXT) - Product SKU/code
+- `item_description` (TEXT) - Product description
 - `quantity` (INTEGER) - Number of units sold
+- `currency` (TEXT) - Transaction currency (GBP, EUR, Eur)
 - `unit_price` (REAL) - Price per unit
-- `discount_percent` (REAL) - Discount percentage applied
 - `line_total` (REAL) - Total line amount (quantity × unit_price - discount)
 - `created_at` (DATETIME) - Record creation timestamp
+
+**Note:** Discount percentages are not stored in the database but calculated dynamically by comparing `line_total` against catalogue prices (typically `ie_base`) using the formula: `((quantity × catalogue_price) - line_total) / (quantity × catalogue_price) × 100`
 
 **Indexes:**
 
@@ -77,44 +82,59 @@ Sales transaction records with complete order details.
 - `idx_sales_customer` on `customer_code`
 - `idx_sales_invoice` on `invoice_number`
 - `idx_sales_date` on `invoice_date`
+- `idx_sales_region` on `region`
+- `idx_sales_document_type` on `document_type`
 
 **Source:** `voltura_group_sales.csv`
+
+**Note:** The cleaned database (`voltura_data_cleaned.db`) has these differences from the original:
+
+- Includes `item_description` column (product description text)
+- `is_rebate` - Flag for rebate/margin adjustments
+- `is_return` - Flag for product returns
+- `is_sample` - Flag for samples/free items
+- `unit_type` - Type indicator (e.g., 'meter' for fractional quantities)
+- `data_quality_issue` - Description of any data quality issues found
+- `customer_name` contains standardized customer names
 
 ---
 
 ### 4. customer_product_keys
 
-Mapping between customers and products with descriptions.
+Customer master data (Note: Despite the filename, this contains only customer information, not product mapping).
 
 **Columns:**
 
 - `id` (INTEGER, PRIMARY KEY) - Auto-incrementing unique identifier
 - `customer_code` (TEXT) - Customer identifier
 - `customer_name` (TEXT) - Customer name
-- `item_code` (TEXT) - Product SKU/code
-- `product_description` (TEXT) - Product description
+- `buying_group` (TEXT) - Customer buying group affiliation (e.g., UNI-IE, IDK-IE, Pave-IE, APIGG, EMAI)
+- `region` (TEXT) - Customer region
+- `account_manager` (TEXT) - Assigned account manager name
 - `created_at` (DATETIME) - Record creation timestamp
 
 **Indexes:**
 
-- `idx_customer_product_key` on `(customer_code, item_code)`
 - `idx_cpk_customer` on `customer_code`
-- `idx_cpk_item` on `item_code`
+- `idx_cpk_region` on `region`
 
 **Source:** `Voltura Group Customer_Product Key.xlsx`
+
+**Data Quality:** All records contain complete data for all columns (no missing values).
 
 ---
 
 ### 5. pallet_sizes
 
-Pallet quantity information for inventory and logistics planning.
+Pallet, carton, and single unit quantity information for inventory and logistics planning.
 
 **Columns:**
 
 - `id` (INTEGER, PRIMARY KEY) - Auto-incrementing unique identifier
 - `item_code` (TEXT) - Product SKU/code
 - `pallet_quantity` (INTEGER) - Number of units per pallet
-- `description` (TEXT) - Product description
+- `carton_quantity` (INTEGER) - Number of units per carton
+- `single_quantity` (INTEGER) - Single unit quantity information
 - `created_at` (DATETIME) - Record creation timestamp
 
 **Indexes:**
@@ -179,8 +199,8 @@ Product sales summary with pricing information.
 - `total_quantity_sold` - Total units sold
 - `total_revenue` - Total sales amount
 - `avg_unit_price` - Average unit price
-- `avg_discount_percent` - Average discount percentage
 - `ie_trade` - Trade price tier
+- `ie_base` - Base price tier
 - `landed_cost_euro` - Product cost
 
 **Usage:**

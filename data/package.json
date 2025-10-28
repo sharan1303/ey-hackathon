@@ -11,7 +11,7 @@
     "import:reset": "ts-node src/import-data.ts --reset",
     "dev": "ts-node src/import-data.ts",
     "query": "ts-node src/query-example.ts",
-    "clean": "ts-node clean-data.ts"
+    "clean": "ts-node src/clean-data.ts"
   },
   "keywords": [],
   "author": "",

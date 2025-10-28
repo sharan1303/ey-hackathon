@@ -104,29 +104,6 @@ The following columns were added to track corrections:
 *Showing top 10 of 196 customer codes with variations.*
 
 
-## New Column Validation
-
-### Sales Table - Additional Columns
-
-**Region:**
-- Unique values: 7 (IEHA, IEKAR, IENI, IENR, IESC, IESER, IEWR)
-- Missing values: 0 records
-
-**Currency:**
-- Unique values: 3 (EUR, Eur, GBP)
-- Missing values: 0 records
-
-**Item Description:**
-- Missing values: 0 records
-
-### Customer Table - Additional Columns
-
-**Buying Group:**
-- Missing values: 0 records
-
-**Account Manager:**
-- Missing values: 0 records
-
 ## Final Table Statistics
 
 | Table | Record Count |
@@ -153,7 +130,6 @@ The following columns were added to track corrections:
 | `quantity` | REAL | Corrected quantity (after DQ fixes) |
 | `currency` | TEXT | Transaction currency (GBP, EUR, etc.) |
 | `unit_price` | REAL | Corrected unit price (after DQ fixes) |
-| `discount_percent` | REAL | Discount percentage applied |
 | `line_total` | REAL | Total line value |
 | `is_rebate` | INTEGER | 1 if record is a rebate/margin adjustment |
 | `is_return` | INTEGER | 1 if record is a product return |
