@@ -89,9 +89,33 @@ DATABASE_PATH=../data/voltura_data_cleaned.db
 
 ## Usage
 
-### Interactive Query (Recommended)
+### Mastra Playground (Visual Interface)
 
-Ask any question about pricing and profitability:
+Launch the interactive Mastra Playground to test your agents, workflows, and tools with a visual UI:
+
+```bash
+pnpm playground
+```
+
+This will start the Mastra development server and you can access the playground at:
+
+- **Playground UI**: `http://localhost:4111/`
+- **Agent Chat**: `http://localhost:4111/agents`
+- **Workflows**: `http://localhost:4111/workflows`
+- **Tools**: `http://localhost:4111/tools`
+- **Swagger API**: `http://localhost:4111/swagger-ui`
+
+The playground provides:
+
+- 🗨️ Interactive chat interface for testing agents
+- 🔍 Real-time traces and debugging
+- ⚙️ Model settings configuration
+- 📊 Agent evaluation metrics
+- 🛠️ Tool testing in isolation
+
+### Interactive Query (CLI)
+
+Ask any question about pricing and profitability from the command line:
 
 ```bash
 pnpm query "Show me customers with negative margins"
@@ -216,6 +240,15 @@ Provides dashboard KPIs or problem areas report.
 - Problems: Lists of issues requiring attention
 
 ## Development
+
+### Available Scripts
+
+- `pnpm playground` - Start the Mastra playground UI (<http://localhost:4111/>)
+- `pnpm query "<question>"` - Ask a single question to the agent
+- `pnpm examples` - Run multiple example queries
+- `pnpm dev` - Run the example queries script
+- `pnpm typecheck` - Check TypeScript types
+- `pnpm build` - Build the project
 
 ### Type Checking
 

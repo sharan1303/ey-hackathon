@@ -40,3 +40,5 @@ tmp
 temp
 *.tmp
 
+# Agent
+.mastra/
