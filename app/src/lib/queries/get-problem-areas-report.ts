@@ -3,7 +3,6 @@ import { getCustomerSales } from './base-queries/customer-sales';
 import { getCustomerProfitability } from './get-customer-profitability';
 import { getProductPerformance } from './get-product-performance';
 import { calculateMargin, filterHighDiscounts, sortByField, limitResults } from './utils/calculations';
-import Decimal from 'decimal.js-light';
 
 export interface ProblemAreasReport {
   negative_margin_customers: Array<{ customer_code: string; customer_name: string; margin: number }>;

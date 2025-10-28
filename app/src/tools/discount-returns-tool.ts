@@ -2,9 +2,8 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { 
   getSalesTransactions,
-  getCustomerSales,
-  getProductSales,
-  calculateMarginPercent
+  calculateMarginPercent,
+  type SalesTransaction
 } from '../lib/queries';
 
 export const discountReturnsTool = createTool({
@@ -160,7 +159,8 @@ export const discountReturnsTool = createTool({
     
     if (analysisType === 'discount_effectiveness') {
       // Analyze if discounts are effective
-      const transactions = getSalesTransactions({
+      // Get transactions with significant discounts (filtered at DB level for efficiency)
+      const withDiscount = getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -169,22 +169,25 @@ export const discountReturnsTool = createTool({
         limit: 5000
       });
       
-      const allTransactions = getSalesTransactions({
+      // Get transactions with minimal/no discounts (filtered at DB level)
+      const withoutDiscount = getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
         includeSamples: false,
+        minDiscount: 0,
+        maxDiscount: minDiscountPercent! - 0.01,
         limit: 5000
       });
       
       // Group by dimension
       const groupMap = new Map<string, { 
-        withDiscount: typeof transactions; 
-        withoutDiscount: typeof transactions;
+        withDiscount: SalesTransaction[]; 
+        withoutDiscount: SalesTransaction[];
         name: string;
       }>();
       
-      transactions.forEach(t => {
+      withDiscount.forEach(t => {
         const key = groupBy === 'customer' ? t.customer_code : 
                     groupBy === 'product' ? t.item_code :
                     groupBy === 'month' ? t.invoice_date.substring(0, 7) :
@@ -203,7 +206,7 @@ export const discountReturnsTool = createTool({
         groupMap.get(key)!.withDiscount.push(t);
       });
       
-      allTransactions.filter(t => t.discount_percent < minDiscountPercent!).forEach(t => {
+      withoutDiscount.forEach(t => {
         const key = groupBy === 'customer' ? t.customer_code : 
                     groupBy === 'product' ? t.item_code :
                     groupBy === 'month' ? t.invoice_date.substring(0, 7) :
@@ -285,7 +288,7 @@ export const discountReturnsTool = createTool({
       };
       
     } else if (analysisType === 'high_discounts') {
-      // Flag unusually high discounts
+      // Flag unusually high discounts (filtered at DB level for efficiency)
       const transactions = getSalesTransactions({
         startDate,
         endDate,
@@ -352,13 +355,15 @@ export const discountReturnsTool = createTool({
         limit: 10000
       });
       
-      const returnTransactions = getSalesTransactions({
+      const rawReturnTransactions = getSalesTransactions({
         startDate,
         endDate,
         includeReturns: true,
         includeSamples: false,
         limit: 10000
-      }).filter(t => t.is_return === 1);
+      });
+      
+      const returnTransactions = rawReturnTransactions.filter(t => t.is_return === 1);
       
       // Group by dimension
       const dimensionMap = new Map<string, {
@@ -461,14 +466,16 @@ export const discountReturnsTool = createTool({
         limit: 10000
       });
       
-      const rebateTransactions = getSalesTransactions({
+      const rawRebateTransactions = getSalesTransactions({
         startDate,
         endDate,
         includeReturns: true,
         includeSamples: false,
         documentTypes: ['CRN'],
         limit: 10000
-      }).filter(t => t.is_return === 0); // Rebates are credit notes but not returns
+      });
+      
+      const rebateTransactions = rawRebateTransactions.filter(t => t.is_return === 0); // Rebates are credit notes but not returns
       
       // Group by dimension
       const dimensionMap = new Map<string, {

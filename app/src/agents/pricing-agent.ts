@@ -14,8 +14,8 @@ import { dataQualityTool } from '../tools/data-quality-tool';
 
 export const pricingAgent = new Agent({
   name: 'Pricing Analysis Agent',
-  // model: azure('gpt-5'),
-  model: openai('gpt-5'),
+  model: azure('gpt-5'),
+  // model: openai('gpt-5'),
   instructions: `You are a financial analysis expert specializing in pricing and profitability for Voltura Group.
 
 ## Your Role

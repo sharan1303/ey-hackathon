@@ -14,6 +14,7 @@ export interface SalesTransaction {
   is_sample: number;
   is_return: number;
   landed_cost_euro: number | null;
+  catalogue_price_base: number | null;
   catalogue_price_trade: number | null;
   product_description: string | null;
 }
@@ -98,14 +99,26 @@ export function getSalesTransactions(filters: SalesTransactionFilters = {}): Sal
     params.push(...itemCodes);
   }
   
-  // Discount filters
+  // Discount filters - calculated inline in WHERE clause
   if (minDiscount !== undefined) {
-    conditions.push('s.discount_percent >= ?');
+    conditions.push(`
+      CASE 
+        WHEN cp.ie_base IS NOT NULL AND cp.ie_base > 0 AND s.quantity > 0 AND s.line_total > 0
+        THEN ((s.quantity * cp.ie_base) - s.line_total) / (s.quantity * cp.ie_base) * 100
+        ELSE 0 
+      END >= ?
+    `);
     params.push(minDiscount);
   }
   
   if (maxDiscount !== undefined) {
-    conditions.push('s.discount_percent <= ?');
+    conditions.push(`
+      CASE 
+        WHEN cp.ie_base IS NOT NULL AND cp.ie_base > 0 AND s.quantity > 0 AND s.line_total > 0
+        THEN ((s.quantity * cp.ie_base) - s.line_total) / (s.quantity * cp.ie_base) * 100
+        ELSE 0 
+      END <= ?
+    `);
     params.push(maxDiscount);
   }
   
@@ -127,18 +140,21 @@ export function getSalesTransactions(filters: SalesTransactionFilters = {}): Sal
       s.quantity,
       s.unit_price,
       s.line_total,
-      s.discount_percent,
+      CASE 
+        WHEN cp.ie_base IS NOT NULL AND cp.ie_base > 0 AND s.quantity > 0 AND s.line_total > 0
+        THEN ((s.quantity * cp.ie_base) - s.line_total) / (s.quantity * cp.ie_base) * 100
+        ELSE 0 
+      END as discount_percent,
       s.document_type,
       s.is_sample,
       s.is_return,
       lc.landed_cost_euro,
+      cp.ie_base as catalogue_price_base,
       cp.ie_trade as catalogue_price_trade,
-      COALESCE(cpk.product_description, ps.description) as product_description
+      s.item_description as product_description
     FROM sales s
     LEFT JOIN landed_costs lc ON s.item_code = lc.item_code
     LEFT JOIN catalogue_prices cp ON s.item_code = cp.item_code
-    LEFT JOIN customer_product_keys cpk ON s.item_code = cpk.item_code
-    LEFT JOIN pallet_sizes ps ON s.item_code = ps.item_code
     ${whereClause}
     ORDER BY s.invoice_date DESC, s.invoice_number
     ${limitClause}

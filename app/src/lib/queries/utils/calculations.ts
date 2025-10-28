@@ -193,3 +193,83 @@ export function paginateResults<T>(data: T[], page: number, pageSize: number): T
   return data.slice(startIndex, startIndex + pageSize);
 }
 
+// Discount calculation functions
+
+/**
+ * Transaction type with catalogue pricing information
+ * This is the minimum required interface for discount calculations
+ */
+export interface TransactionWithCataloguePrice {
+  quantity: number;
+  line_total: number;
+  catalogue_price_base: number | null;
+}
+
+/**
+ * Calculate discount percentage for a transaction
+ * Formula: ((quantity × catalogue_price) - line_total) / (quantity × catalogue_price) × 100
+ * 
+ * @param transaction - Sales transaction with catalogue price
+ * @returns Discount percentage (positive = discount, negative = premium pricing, 0 = no discount or missing data)
+ */
+export function calculateDiscount(transaction: TransactionWithCataloguePrice): number {
+  const cataloguePrice = transaction.catalogue_price_base;
+  
+  // Return 0 if no catalogue price, invalid price, or invalid quantity
+  if (
+    cataloguePrice === null || 
+    cataloguePrice <= 0 || 
+    transaction.quantity <= 0
+  ) {
+    return 0;
+  }
+  
+  const expectedTotal = transaction.quantity * cataloguePrice;
+  const actualTotal = transaction.line_total;
+  
+  // Calculate discount percentage
+  const discount = ((expectedTotal - actualTotal) / expectedTotal) * 100;
+  
+  return roundToDecimal(discount, 2);
+}
+
+/**
+ * Add discount calculations to an array of transactions
+ * 
+ * @param transactions - Array of sales transactions
+ * @returns Array of transactions with discount_percent added
+ */
+export function addDiscountCalculations<T extends TransactionWithCataloguePrice>(
+  transactions: T[]
+): (T & { discount_percent: number })[] {
+  return transactions.map(t => ({
+    ...t,
+    discount_percent: calculateDiscount(t)
+  }));
+}
+
+/**
+ * Filter transactions by discount range
+ * 
+ * @param transactions - Array of transactions with discounts
+ * @param minDiscount - Minimum discount percentage (inclusive)
+ * @param maxDiscount - Maximum discount percentage (inclusive)
+ * @returns Filtered transactions
+ */
+export function filterByDiscount<T extends { discount_percent: number }>(
+  transactions: T[],
+  minDiscount?: number,
+  maxDiscount?: number
+): T[] {
+  let filtered = transactions;
+  
+  if (minDiscount !== undefined) {
+    filtered = filtered.filter(t => t.discount_percent >= minDiscount);
+  }
+  
+  if (maxDiscount !== undefined) {
+    filtered = filtered.filter(t => t.discount_percent <= maxDiscount);
+  }
+  
+  return filtered;
+}
