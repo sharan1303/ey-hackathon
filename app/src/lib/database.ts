@@ -3,11 +3,11 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 
 // Get __dirname equivalent in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const dbFilename = fileURLToPath(import.meta.url);
+const dbDirname = path.dirname(dbFilename);
 
 // Database connection
-const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '../../../data/voltura_data_cleaned.db');
+const DB_PATH = process.env.DATABASE_PATH || path.join(dbDirname, '../../../data/voltura_data_cleaned.db');
 let db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
@@ -42,6 +42,3 @@ process.on('exit', () => {
     db.close();
   }
 });
-
-// Re-export all query functions and types from the queries folder
-export * from './queries';

@@ -1,4 +1,5 @@
-import { getDb, getDefaultDateRange } from '../database';
+import { getProductSales } from './base-queries/product-sales';
+import { calculateMargin, calculateMarginPercent, calculateAverage, sortByField, limitResults } from './utils/calculations';
 
 export interface ProductPerformance {
   item_code: string;
@@ -13,57 +14,105 @@ export interface ProductPerformance {
   avg_order_quantity: number;
 }
 
+export interface ProductPerformanceFilters {
+  startDate?: string;
+  endDate?: string;
+  sortBy?: 'revenue' | 'margin' | 'quantity' | 'margin_percent';
+  limit?: number;
+  order?: 'asc' | 'desc';
+  minMarginPercent?: number;
+  maxMarginPercent?: number;
+  minRevenue?: number;
+  minTransactions?: number;
+}
+
 /**
  * Get product performance metrics
  */
 export function getProductPerformance(
   startDate?: string,
   endDate?: string,
+  sortBy?: 'revenue' | 'margin' | 'quantity' | 'margin_percent',
+  limit?: number,
+  order?: 'asc' | 'desc'
+): ProductPerformance[];
+export function getProductPerformance(
+  filters: ProductPerformanceFilters
+): ProductPerformance[];
+export function getProductPerformance(
+  startDateOrFilters?: string | ProductPerformanceFilters,
+  endDate?: string,
   sortBy: 'revenue' | 'margin' | 'quantity' | 'margin_percent' = 'revenue',
   limit = 100,
   order: 'asc' | 'desc' = 'desc'
 ): ProductPerformance[] {
-  const dateRange = startDate && endDate ? { startDate, endDate } : getDefaultDateRange();
+  // Handle both function signatures
+  let filters: ProductPerformanceFilters;
+  if (typeof startDateOrFilters === 'object') {
+    filters = startDateOrFilters;
+  } else {
+    filters = {
+      startDate: startDateOrFilters,
+      endDate,
+      sortBy,
+      limit,
+      order
+    };
+  }
   
-  const sortColumn = {
+  const {
+    startDate,
+    endDate: filterEndDate,
+    sortBy: filterSortBy = 'revenue',
+    limit: filterLimit = 100,
+    order: filterOrder = 'desc',
+    minMarginPercent,
+    maxMarginPercent,
+    minRevenue,
+    minTransactions
+  } = filters;
+  
+  // Get base product sales data with SQL-level filters
+  const productSales = getProductSales({
+    startDate,
+    endDate: filterEndDate,
+    includeReturns: false,
+    includeSamples: false,
+    minRevenue,
+    minTransactions
+  });
+  
+  // Calculate margins and transform data
+  let productsWithMetrics: ProductPerformance[] = productSales.map(product => ({
+    item_code: product.item_code,
+    product_description: product.product_description,
+    quantity_sold: product.total_quantity,
+    revenue: product.total_revenue,
+    cost: product.total_cost,
+    margin: calculateMargin(product.total_revenue, product.total_cost),
+    margin_percent: calculateMarginPercent(product.total_revenue, product.total_cost),
+    unique_customers: product.unique_customers,
+    transaction_count: product.transaction_count,
+    avg_order_quantity: calculateAverage(product.total_quantity, product.transaction_count)
+  }));
+  
+  // Apply margin percent filters
+  if (minMarginPercent !== undefined) {
+    productsWithMetrics = productsWithMetrics.filter(p => p.margin_percent >= minMarginPercent);
+  }
+  if (maxMarginPercent !== undefined) {
+    productsWithMetrics = productsWithMetrics.filter(p => p.margin_percent <= maxMarginPercent);
+  }
+  
+  // Map sortBy parameter to field name
+  const sortField: keyof ProductPerformance = {
     revenue: 'revenue',
     margin: 'margin',
     quantity: 'quantity_sold',
     margin_percent: 'margin_percent'
-  }[sortBy];
+  }[filterSortBy] as keyof ProductPerformance;
   
-  const sortOrder = order.toUpperCase();
-  
-  const query = `
-    SELECT 
-      s.item_code,
-      COALESCE(cpk.product_description, ps.description, 'Unknown') as product_description,
-      SUM(s.quantity) as quantity_sold,
-      ROUND(SUM(s.line_total), 2) as revenue,
-      ROUND(SUM(s.quantity * COALESCE(lc.landed_cost_euro, 0)), 2) as cost,
-      ROUND(SUM(s.line_total - (s.quantity * COALESCE(lc.landed_cost_euro, 0))), 2) as margin,
-      ROUND(
-        (SUM(s.line_total - (s.quantity * COALESCE(lc.landed_cost_euro, 0))) / 
-         NULLIF(SUM(s.quantity * COALESCE(lc.landed_cost_euro, 1)), 0)) * 100,
-        2
-      ) as margin_percent,
-      COUNT(DISTINCT s.customer_code) as unique_customers,
-      COUNT(*) as transaction_count,
-      ROUND(AVG(s.quantity), 2) as avg_order_quantity
-    FROM sales s
-    LEFT JOIN landed_costs lc ON s.item_code = lc.item_code
-    LEFT JOIN customer_product_keys cpk ON s.item_code = cpk.item_code
-    LEFT JOIN pallet_sizes ps ON s.item_code = ps.item_code
-    WHERE s.document_type = 'INV' 
-      AND s.is_sample = 0
-      AND s.is_return = 0
-      AND s.invoice_date BETWEEN ? AND ?
-    GROUP BY s.item_code
-    ORDER BY ${sortColumn} ${sortOrder}
-    LIMIT ?
-  `;
-  
-  const db = getDb();
-  return db.prepare(query).all(dateRange.startDate, dateRange.endDate, limit) as ProductPerformance[];
+  // Sort and limit
+  const sorted = sortByField(productsWithMetrics, sortField, filterOrder);
+  return limitResults(sorted, filterLimit);
 }
-
