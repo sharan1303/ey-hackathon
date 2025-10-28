@@ -1,6 +1,8 @@
 import { Agent } from '@mastra/core/agent';
 import { openai } from '@ai-sdk/openai';
 import {azure} from '@ai-sdk/azure';
+import { Memory } from '@mastra/memory';
+import { LibSQLStore } from '@mastra/libsql';
 import { marginAnalysisTool } from '../tools/margin-analysis-tool';
 import { executiveSummaryTool } from '../tools/executive-summary-tool';
 import { pricingAnalysisTool } from '../tools/pricing-analysis-tool';
@@ -10,12 +12,20 @@ import { discountReturnsTool } from '../tools/discount-returns-tool';
 import { trendsForecastingTool } from '../tools/trends-forecasting-tool';
 import { dataQualityTool } from '../tools/data-quality-tool';
 
-
+// Initialize memory with configuration for context retention
+const memory = new Memory({
+  storage: new LibSQLStore({
+    url: process.env.LIBSQL_URL || ':memory:', // Use in-memory DB or configure via env
+  }),
+  options: {
+    lastMessages: 5, // Number of recent messages to include
+  },
+});
 
 export const pricingAgent = new Agent({
+  memory,
   name: 'Pricing Analysis Agent',
   model: azure('gpt-5'),
-  // model: openai('gpt-5'),
   instructions: `You are a financial analysis expert specializing in pricing and profitability for Voltura Group.
 
 ## Your Role
