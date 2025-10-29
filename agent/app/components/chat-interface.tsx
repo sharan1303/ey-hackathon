@@ -30,6 +30,9 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
   const [historicalMessages, setHistoricalMessages] = useState<ChatMessage[]>([]);
   const [conversationTitle, setConversationTitle] = useState<string>('');
 
+  // Track tool calls separately
+  const [toolCalls, setToolCalls] = useState<Map<string, ChatMessage>>(new Map());
+
   // Create agent with custom request handler that supports streaming
   const [agent] = useXAgent({
     request: async ({ message }, { onUpdate, onSuccess, onError }) => {
@@ -59,6 +62,8 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullContent = '';
+        let buffer = '';
+        const currentToolCalls = new Map<string, ChatMessage>();
 
         try {
           while (true) {
@@ -69,18 +74,78 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
             }
 
             const chunk = decoder.decode(value, { stream: true });
-            fullContent += chunk;
+            buffer += chunk;
             
-            // Update the UI with each chunk for real-time streaming
-            onUpdate({ data: fullContent });
+            console.log('📦 Received chunk:', chunk.substring(0, 100));
+            
+            // Parse SSE events (format: "data: {...}\n\n")
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop() || ''; // Keep incomplete line in buffer
+            
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              if (!line.startsWith('data: ')) {
+                console.warn('Line does not start with "data: ":', line);
+                continue;
+              }
+              
+              try {
+                const jsonStr = line.substring(6); // Remove "data: " prefix
+                console.log('📝 Parsing event:', jsonStr.substring(0, 100));
+                const event = JSON.parse(jsonStr);
+                console.log('✅ Parsed event:', event.type);
+                
+                if (event.type === 'tool-call') {
+                  // Create a new tool call message
+                  const toolCallMessage: ChatMessage = {
+                    id: event.id,
+                    role: 'tool-call',
+                    content: '', // Tool calls don't have content
+                    timestamp: Date.now(),
+                    toolCall: {
+                      toolName: event.toolName,
+                      arguments: event.arguments,
+                      status: 'pending',
+                    },
+                  };
+                  
+                  currentToolCalls.set(event.id, toolCallMessage);
+                  setToolCalls(new Map(currentToolCalls));
+                  
+                  console.log('🔧 Tool call received:', event.toolName);
+                } else if (event.type === 'tool-result') {
+                  // Update existing tool call with result
+                  const existingToolCall = currentToolCalls.get(event.id);
+                  if (existingToolCall && existingToolCall.toolCall) {
+                    existingToolCall.toolCall.result = event.result;
+                    existingToolCall.toolCall.status = 'complete';
+                    setToolCalls(new Map(currentToolCalls));
+                    
+                    console.log('✅ Tool result received:', event.toolName);
+                  }
+                } else if (event.type === 'text-delta') {
+                  // Accumulate text content
+                  fullContent += event.content;
+                  onUpdate({ data: fullContent });
+                } else if (event.type === 'error') {
+                  console.error('Stream error:', event.message);
+                  throw new Error(event.message);
+                }
+              } catch (parseError) {
+                console.error('Failed to parse SSE event:', parseError, line);
+              }
+            }
           }
 
           onSuccess([{ data: fullContent }]);
           
           // Update conversation after successful response
           if (message && fullContent) {
-            updateConversation(message, fullContent);
+            updateConversationWithToolCalls(message, fullContent, Array.from(currentToolCalls.values()));
           }
+          
+          // Clear tool calls after saving
+          setToolCalls(new Map());
         } finally {
           reader.releaseLock();
         }
@@ -98,8 +163,18 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
     requestFallback: 'Sorry, something went wrong. Please try again.',
   });
 
-  // Update conversation in storage
+  // Update conversation in storage (legacy method without tool calls)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const updateConversation = (userMessage: string, aiResponse: string) => {
+    updateConversationWithToolCalls(userMessage, aiResponse, []);
+  };
+
+  // Update conversation in storage with tool calls
+  const updateConversationWithToolCalls = (
+    userMessage: string,
+    aiResponse: string,
+    toolCallMessages: ChatMessage[]
+  ) => {
     const conversations = getConversations();
     let conversation = conversations.find((c) => c.id === conversationId);
 
@@ -111,16 +186,22 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
       timestamp: Date.now(),
     };
     
+    // Add tool call messages (they come between user and assistant)
+    const toolCallMsgs = toolCallMessages.map((tc, index) => ({
+      ...tc,
+      timestamp: Date.now() + index + 1,
+    }));
+    
     const assistantMsg: ChatMessage = {
       id: `msg_${Date.now()}_assistant`,
       role: 'assistant',
       content: aiResponse,
-      timestamp: Date.now() + 1,
+      timestamp: Date.now() + toolCallMessages.length + 1,
     };
 
     // Get existing messages and append new ones
     const existingMessages = getConversationMessages(conversationId);
-    const updatedMessages = [...existingMessages, userMsg, assistantMsg];
+    const updatedMessages = [...existingMessages, userMsg, ...toolCallMsgs, assistantMsg];
 
     if (!conversation) {
       conversation = {
@@ -208,7 +289,7 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
   };
 
   // Transform messages for Bubble.List
-  // Combine historical messages with live chat messages
+  // Combine historical messages with live chat messages and tool calls
   const allMessages = [
     // Historical messages from storage
     ...historicalMessages.map((msg) => ({
@@ -216,6 +297,7 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
       loading: false,
       role: msg.role,
       content: msg.content,
+      toolCall: msg.toolCall,
     })),
     // Live messages from current chat session - only include messages that haven't been saved yet
     // We filter out messages that appear to already be in historicalMessages to prevent duplication
@@ -247,6 +329,14 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
           content: messageContent,
         };
       }),
+    // Live tool calls (currently in progress)
+    ...Array.from(toolCalls.values()).map((tc) => ({
+      key: tc.id,
+      loading: false,
+      role: 'tool-call' as const,
+      content: '',
+      toolCall: tc.toolCall,
+    })),
   ];
 
   const bubbleItems = allMessages;
@@ -388,6 +478,7 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
                   role={item.role}
                   loading={item.loading}
                   typing={item.role === 'assistant' && item.loading}
+                  toolCall={'toolCall' in item ? item.toolCall : undefined}
                 />
               ),
             }))}

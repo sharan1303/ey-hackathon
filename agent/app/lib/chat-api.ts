@@ -2,9 +2,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'tool-call';
   content: string;
   timestamp: number;
+  toolCall?: ToolCallData;
+}
+
+export interface ToolCallData {
+  toolName: string;
+  arguments: Record<string, unknown>;
+  result?: Record<string, unknown> | Array<unknown>;
+  status: 'pending' | 'complete';
+}
+
+export interface StreamEvent {
+  type: 'tool-call' | 'tool-result' | 'text-delta' | 'error';
+  data: Record<string, unknown>;
 }
 
 export interface Conversation {

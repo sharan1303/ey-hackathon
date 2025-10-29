@@ -96,6 +96,13 @@ body {
   margin-bottom: 0.5em;
 }
 
+/* Tool call bubble wrapper */
+.tool-call-bubble-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  margin: 12px 0;
+}
+
 .markdown-content code {
   background: #f4f4f5;
   padding: 2px 6px;

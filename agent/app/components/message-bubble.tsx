@@ -4,24 +4,37 @@ import { message as antdMessage } from 'antd';
 import { GPTVisLite, withDefaultChartCode } from '@antv/gpt-vis';
 import { DataVisualizer } from './data-visualizer';
 import { extractTables } from '../lib/message-parser';
+import { ToolCallBubble } from './tool-call-bubble';
+import type { ToolCallData } from '../lib/chat-api';
 
 // Create a custom code component with English locale
 const CodeBlock = withDefaultChartCode({ locale: 'en-US' });
 
 interface MessageBubbleProps {
   content: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'tool-call';
   loading?: boolean;
   typing?: boolean;
+  toolCall?: ToolCallData;
 }
 
-export function MessageBubble({ content, role, loading, typing }: MessageBubbleProps) {
+export function MessageBubble({ content, role, loading, typing, toolCall }: MessageBubbleProps) {
   const isUser = role === 'user';
+  const isToolCall = role === 'tool-call';
 
   const handleCopy = () => {
     navigator.clipboard.writeText(content);
     antdMessage.success('Copied to clipboard');
   };
+
+  // If this is a tool call message, render the ToolCallBubble component
+  if (isToolCall && toolCall) {
+    return (
+      <div className="tool-call-bubble-wrapper">
+        <ToolCallBubble toolCall={toolCall} />
+      </div>
+    );
+  }
 
   // Use GPT-Vis for assistant messages with table support, plain text for user messages
   const bubbleContent = isUser ? (
