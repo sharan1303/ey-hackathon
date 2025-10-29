@@ -20,14 +20,8 @@ interface ChatInterfaceProps {
 }
 
 const roles: GetProp<typeof Bubble.List, 'roles'> = {
-  assistant: {
-    placement: 'start',
-    avatar: { icon: <RobotOutlined />, style: { background: '#f0f0f0', color: '#1677ff' } },
-  },
-  user: {
-    placement: 'end',
-    avatar: { icon: <UserOutlined />, style: { background: '#1677ff' } },
-  },
+  assistant: {placement: 'start'},
+  user: {placement: 'end'}
 };
 
 export function ChatInterface({ conversationId, onConversationUpdate }: ChatInterfaceProps) {
@@ -35,6 +29,7 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [historicalMessages, setHistoricalMessages] = useState<ChatMessage[]>([]);
+  const [conversationTitle, setConversationTitle] = useState<string>('');
 
   // Create agent with custom request handler that supports streaming
   const [agent] = useXAgent({
@@ -149,6 +144,9 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
     // Update historical messages state
     setHistoricalMessages(updatedMessages);
     
+    // Update the conversation title state
+    setConversationTitle(conversation.title);
+    
     if (onConversationUpdate) {
       onConversationUpdate(conversation);
     }
@@ -162,6 +160,13 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
     const conversations = getConversations();
     const conversation = conversations.find((c) => c.id === conversationId);
     setIsFirstMessage(!conversation || conversation.messageCount === 0);
+    
+    // Load the conversation title
+    if (conversation) {
+      setConversationTitle(conversation.title);
+    } else {
+      setConversationTitle('');
+    }
   }, [conversationId]);
 
   // Auto-scroll to bottom when new messages arrive
@@ -171,6 +176,32 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
 
   const handleSubmit = (value: string) => {
     if (!value.trim()) return;
+
+    // Optimistically set the title for the first message
+    if (isFirstMessage) {
+      const newTitle = generateTitle(value);
+      setConversationTitle(newTitle);
+      
+      // Optimistically create/update conversation in storage
+      const conversations = getConversations();
+      const existingConversation = conversations.find((c) => c.id === conversationId);
+      
+      if (!existingConversation) {
+        const optimisticConversation: Conversation = {
+          id: conversationId,
+          title: newTitle,
+          lastMessage: value.substring(0, 100),
+          timestamp: Date.now(),
+          messageCount: 0,
+          messages: [],
+        };
+        saveConversation(optimisticConversation);
+        
+        if (onConversationUpdate) {
+          onConversationUpdate(optimisticConversation);
+        }
+      }
+    }
 
     onRequest(value);
     setContent('');
@@ -187,19 +218,36 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
       role: msg.role,
       content: msg.content,
     })),
-    // Live messages from current chat session
-    ...messages.map(({ id, message, status }) => {
-      const messageContent = typeof message === 'string' 
-        ? message 
-        : (message as { data?: string })?.data || '';
-      
-      return {
-        key: id,
-        loading: status === 'loading',
-        role: status === 'local' ? ('user' as const) : ('assistant' as const),
-        content: messageContent,
-      };
-    }),
+    // Live messages from current chat session - only include messages that haven't been saved yet
+    // We filter out messages that appear to already be in historicalMessages to prevent duplication
+    ...messages
+      .filter(({ message, status }) => {
+        const messageContent = typeof message === 'string' 
+          ? message 
+          : (message as { data?: string })?.data || '';
+        
+        // Only include loading messages or messages not yet in historical messages
+        if (status === 'loading') return true;
+        
+        // Check if this message content already exists in historical messages
+        const isDuplicate = historicalMessages.some(
+          (hm) => hm.content === messageContent && hm.role === (status === 'local' ? 'user' : 'assistant')
+        );
+        
+        return !isDuplicate;
+      })
+      .map(({ id, message, status }) => {
+        const messageContent = typeof message === 'string' 
+          ? message 
+          : (message as { data?: string })?.data || '';
+        
+        return {
+          key: id,
+          loading: status === 'loading',
+          role: status === 'local' ? ('user' as const) : ('assistant' as const),
+          content: messageContent,
+        };
+      }),
   ];
 
   const bubbleItems = allMessages;
@@ -210,7 +258,7 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
-        background: '#f5f5f5',
+        background: 'white',
       }}
     >
       {/* Header */}
@@ -222,16 +270,12 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          height: 56,
         }}
       >
-        <div>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
-            Voltura Pricing Agent
-          </h2>
-          <p style={{ margin: 0, fontSize: 13, color: '#999' }}>
-            AI-powered pricing and profitability analysis
-          </p>
-        </div>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>
+          {conversationTitle || 'New chat'}
+        </h2>
       </div>
 
       {/* Messages Area */}
@@ -254,55 +298,78 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
               justifyContent: 'center',
               textAlign: 'center',
               padding: '40px 20px',
+              gap: 48,
             }}
           >
-            <RobotOutlined style={{ fontSize: 64, color: '#1677ff', marginBottom: 24 }} />
-            <h1 style={{ fontSize: 32, fontWeight: 600, marginBottom: 16 }}>
-              Welcome to Volt
-            </h1>
-            <p style={{ fontSize: 16, color: '#666', maxWidth: 600, marginBottom: 32 }}>
-              I&apos;m here to help you analyze pricing, profitability, and identify opportunities
-              in your sales data. Ask me anything about margins, customer performance, or
-              product pricing.
-            </p>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: 16,
-                maxWidth: 800,
-                width: '100%',
-              }}
-            >
-              {[
-                'Which customers are losing money?',
-                'Show me the executive dashboard',
-                'What are our top performing products?',
-                'Identify pricing issues in Q4 2024',
-              ].map((suggestion) => (
-                <div
-                  key={suggestion}
-                  onClick={() => handleSubmit(suggestion)}
+            <div style={{ maxWidth: 900 }}>
+                <h1 style={{ fontSize: 32, fontWeight: 600, marginBottom: 16 }}>
+                Say hi to Volt
+                </h1>
+              <p style={{ fontSize: 16, color: '#666', marginBottom: 48 }}>
+                I&apos;m here to help you analyse pricing, profitability, and identify opportunities
+                in your sales data. Ask me anything about margins, customer performance, or
+                product pricing.
+              </p>
+
+              {/* Centered Input */}
+              <div style={{ marginBottom: 32 }}>
+                <Sender
+                  value={content}
+                  onChange={setContent}
+                  onSubmit={handleSubmit}
+                  placeholder="Press Shift + Enter to send message"
+                  loading={agent.isRequesting()}
                   style={{
-                    padding: 16,
-                    background: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 12,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    maxWidth: 900,
+                    margin: '0 auto',
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#1677ff';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(22, 119, 255, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <p style={{ margin: 0, fontSize: 14, color: '#262626' }}>{suggestion}</p>
-                </div>
-              ))}
+                />
+              </div>
+
+              {/* Horizontal Scrollable Suggestions */}
+              <div
+                style={{
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  display: 'flex',
+                  gap: 12,
+                  paddingBottom: 8,
+                  scrollbarWidth: 'thin',
+                }}
+              >
+                {[
+                  'How many unique customers did we have in 2024?',
+                  'Which products are most frequently returned?',
+                  "What's the margin for 2024?",
+                ].map((suggestion) => (
+                  <div
+                    key={suggestion}
+                    onClick={() => handleSubmit(suggestion)}
+                    style={{
+                      padding: '10px 16px',
+                      background: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 20,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      whiteSpace: 'nowrap',
+                      fontSize: 14,
+                      color: '#262626',
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#1677ff';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(22, 119, 255, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    {suggestion}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -321,33 +388,34 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
                 />
               ),
             }))}
-            style={{ marginBottom: 24 }}
           />
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div
-        style={{
-          background: 'white',
-          borderTop: '1px solid #e5e7eb',
-          padding: '16px 24px',
-        }}
-      >
-        <Sender
-          value={content}
-          onChange={setContent}
-          onSubmit={handleSubmit}
-          placeholder="Ask about pricing, margins, or profitability..."
-          loading={agent.isRequesting()}
+      {/* Input Area - Only shown when there are messages */}
+      {bubbleItems.length > 0 && (
+        <div
           style={{
-            maxWidth: 900,
-            margin: '0 auto',
+            background: 'white',
+            borderTop: '1px solid #e5e7eb',
+            padding: '16px 24px',
           }}
-        />
-      </div>
+        >
+          <Sender
+            value={content}
+            onChange={setContent}
+            onSubmit={handleSubmit}
+            placeholder="Ask about pricing, margins, or profitability..."
+            loading={agent.isRequesting()}
+            style={{
+              maxWidth: 900,
+              margin: '0 auto',
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

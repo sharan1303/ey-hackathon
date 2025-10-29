@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export interface ChatMessage {
   id: string;
@@ -185,5 +185,38 @@ export function saveConversationMessages(conversationId: string, messages: ChatM
   } catch (error) {
     console.error('Failed to save conversation messages:', error);
   }
+}
+
+/**
+ * Hook to fetch conversations with automatic refetching
+ */
+export function useConversations() {
+  return useQuery({
+    queryKey: ['conversations'],
+    queryFn: getConversations,
+    staleTime: 0, // Always consider stale to refetch on focus
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+  });
+}
+
+/**
+ * Hook to delete a conversation with cache invalidation
+ */
+export function useDeleteConversation() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (conversationId: string) => {
+      deleteConversation(conversationId);
+      return Promise.resolve();
+    },
+    onSuccess: () => {
+      // Invalidate and refetch conversations
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    onError: (error) => {
+      console.error('Failed to delete conversation:', error);
+    },
+  });
 }
 

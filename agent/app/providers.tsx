@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider } from 'antd';
+import enUS from 'antd/locale/en_US';
 import { useState, type ReactNode } from 'react';
 
 const queryClientConfig = {
@@ -38,7 +39,7 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider theme={antdTheme}>
+      <ConfigProvider theme={antdTheme} locale={enUS}>
         {children}
       </ConfigProvider>
     </QueryClientProvider>

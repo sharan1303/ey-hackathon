@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { PlusOutlined, DeleteOutlined, MessageOutlined } from '@ant-design/icons';
-import { Button, List, Typography, Popconfirm, Empty } from 'antd';
+import { PlusOutlined, DeleteOutlined, MessageOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { Button, List, Typography, Popconfirm, Empty, Spin } from 'antd';
 import {
-  getConversations,
-  deleteConversation,
+  useConversations,
+  useDeleteConversation,
   type Conversation,
 } from '../lib/chat-api';
 
@@ -22,33 +21,16 @@ export function ConversationSidebar({
   onSelectConversation,
   onNewConversation,
 }: ConversationSidebarProps) {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-
-  useEffect(() => {
-    loadConversations();
-    
-    // Listen for storage changes from other tabs/windows
-    const handleStorage = () => {
-      loadConversations();
-    };
-    
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
-
-  const loadConversations = () => {
-    const loaded = getConversations();
-    setConversations(loaded);
-  };
+  const { data: conversations = [], isLoading } = useConversations();
+  const deleteMutation = useDeleteConversation();
 
   const handleDelete = (conversationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteConversation(conversationId);
-    loadConversations();
+    deleteMutation.mutate(conversationId);
   };
 
   const groupByDate = (convs: Conversation[]) => {
-    const now = Date.now();
+    const now = new Date().getTime();
     const oneDay = 24 * 60 * 60 * 1000;
     const oneWeek = 7 * oneDay;
 
@@ -86,26 +68,77 @@ export function ConversationSidebar({
       style={{
         width: 280,
         height: '100vh',
-        background: 'white',
+        background: '#f9fafb',
         borderRight: '1px solid #e5e7eb',
         display: 'flex',
         flexDirection: 'column',
       }}
     >
+      {/* Logo + Name */}
       <div
         style={{
-          padding: 16,
+          padding: '16px 24px',
+          background: 'linear-gradient(135deg, #E6F4FF 0%, #F9F0FF 100%)',
           borderBottom: '1px solid #e5e7eb',
+          height: 56,
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <ThunderboltOutlined
+            style={{
+              fontSize: 20,
+              color: '#1677ff',
+            }}
+          />
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: 600,
+              color: '#262626',
+              lineHeight: '24px',
+            }}
+          >
+            Volt
+          </Text>
+        </div>
+      </div>
+
+      {/* New Chat Button */}
+      <div
+        style={{
+          padding: 10,
         }}
       >
         <Button
-          type="primary"
           icon={<PlusOutlined />}
           onClick={onNewConversation}
           block
-          size="large"
+          size="middle"
+          style={{
+            background: '#2b3544',
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            fontWeight: 500,
+            height: 40,
+            minHeight: 40,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#1f2937';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#2b3544';
+          }}
         >
-          New Chat
+          New chat
         </Button>
       </div>
 
@@ -116,7 +149,11 @@ export function ConversationSidebar({
           padding: '8px 0',
         }}
       >
-        {groups.length === 0 ? (
+        {isLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 40 }}>
+            <Spin />
+          </div>
+        ) : groups.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description="No conversations yet"
@@ -127,14 +164,22 @@ export function ConversationSidebar({
             <div key={group.title} style={{ marginBottom: 16 }}>
               <div
                 style={{
-                  padding: '8px 16px',
-                  color: '#999',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                 }}
               >
-                {group.title}
+                <MessageOutlined style={{ fontSize: 16, color: '#666' }} />
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: '#262626',
+                  }}
+                >
+                  {group.title}
+                </Text>
               </div>
               <List
                 dataSource={group.items}
@@ -147,17 +192,16 @@ export function ConversationSidebar({
                       cursor: 'pointer',
                       background:
                         currentConversationId === conv.id
-                          ? '#f0f7ff'
+                          ? '#e8f0fe'
                           : 'transparent',
-                      borderLeft:
-                        currentConversationId === conv.id
-                          ? '3px solid #1677ff'
-                          : '3px solid transparent',
+                      borderRadius: 8,
+                      margin: '2px 8px',
                       transition: 'all 0.2s',
+                      border: 'none',
                     }}
                     onMouseEnter={(e) => {
                       if (currentConversationId !== conv.id) {
-                        e.currentTarget.style.background = '#f9fafb';
+                        e.currentTarget.style.background = '#f3f4f6';
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -175,44 +219,22 @@ export function ConversationSidebar({
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
+                        
+                        <Text
+                          ellipsis
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            marginBottom: 4,
+                            fontSize: 14,
+                            color: '#262626',
+                            display: 'block',
+                            fontWeight: currentConversationId === conv.id ? 500 : 400,
                           }}
                         >
-                          <MessageOutlined
-                            style={{ fontSize: 14, color: '#1677ff' }}
-                          />
-                          <Text
-                            ellipsis
-                            strong
-                            style={{
-                              fontSize: 14,
-                              color:
-                                currentConversationId === conv.id
-                                  ? '#1677ff'
-                                  : '#262626',
-                            }}
-                          >
-                            {conv.title}
-                          </Text>
-                        </div>
-                        {conv.lastMessage && (
-                          <Text
-                            ellipsis
-                            type="secondary"
-                            style={{ fontSize: 12 }}
-                          >
-                            {conv.lastMessage}
-                          </Text>
-                        )}
+                          {conv.title}
+                        </Text>
                       </div>
                       <Popconfirm
                         title="Delete conversation?"
-                        onConfirm={(e) => handleDelete(conv.id, e as any)}
+                        onConfirm={(e) => handleDelete(conv.id, e as React.MouseEvent)}
                         okText="Delete"
                         cancelText="Cancel"
                       >
@@ -221,7 +243,9 @@ export function ConversationSidebar({
                           style={{
                             fontSize: 14,
                             color: '#999',
+                            marginTop: 4,
                             marginLeft: 8,
+                            opacity: 0.6,
                           }}
                         />
                       </Popconfirm>

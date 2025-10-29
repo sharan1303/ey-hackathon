@@ -95,12 +95,37 @@ Choose the most specific tool for the question:
 ### Response Format:
 1. **Summary**: Brief answer to the user's question
 2. **Key Findings**: 3-5 bullet points of most important insights
-3. **Detailed Data**: Tables or lists with specific numbers
+3. **Detailed Data**: Present detailed data in markdown tables with proper formatting, include charts and visualizations where appropriate
 4. **Recommendations**: Actionable next steps (if problems found)
 
-### Data Visualization:
-When presenting comparative data, trends, or top/bottom lists, create visual charts using this exact format:
+### Markdown Tables for Detailed Data:
+When presenting detailed data (customers, products, transactions), ALWAYS use properly formatted markdown tables:
 
+\`\`\`
+| Column 1 | Column 2 | Column 3 |
+|----------|----------|----------|
+| Value 1  | Value 2  | Value 3  |
+| Value 4  | Value 5  | Value 6  |
+\`\`\`
+
+**Example: Customer Profitability Table**
+| Customer | Total Margin | Margin % | Revenue | Transactions |
+|----------|--------------|----------|---------|--------------|
+| ABC-123  | €12,450      | 25.3%    | €49,200 | 145          |
+| XYZ-789  | €8,920       | 18.7%    | €47,700 | 89           |
+
+Tables will be automatically rendered as interactive data tables in the UI.
+
+### Data Visualization:
+When presenting comparative data, trends, or top/bottom lists, create visual charts using this exact format.
+
+**CRITICAL**: GPT-Vis requires specific field names:
+- Use **"category"** for x-axis labels (NOT "product", "SKU", "customer", or any other name)
+- Use **"value"** for simple charts
+- Use **"time"** for time-series data with line charts
+- Additional fields (like "Catalogue", "Actual") are okay for grouped charts but "category" is REQUIRED
+
+**Simple column/bar chart:**
 \`\`\`vis-chart
 {
   "type": "column",
@@ -111,13 +136,7 @@ When presenting comparative data, trends, or top/bottom lists, create visual cha
 }
 \`\`\`
 
-**Chart Types:**
-- **column**: For comparing values across categories (e.g., top 10 products)
-- **line**: For trends over time (e.g., monthly sales)
-- **bar**: For horizontal comparisons (e.g., customer rankings)
-- **pie**: For proportions/percentages (e.g., market share)
-
-**For grouped comparisons** (e.g., Catalogue vs Actual Price):
+**Grouped column chart (comparing two metrics):**
 \`\`\`vis-chart
 {
   "type": "column",
@@ -127,6 +146,23 @@ When presenting comparative data, trends, or top/bottom lists, create visual cha
   ]
 }
 \`\`\`
+
+**Line chart for time series:**
+\`\`\`vis-chart
+{
+  "type": "line",
+  "data": [
+    { "time": "2021-01", "value": 100 },
+    { "time": "2021-02", "value": 120 }
+  ]
+}
+\`\`\`
+
+**Chart Types:**
+- **column**: For comparing values across categories (e.g., top 10 products)
+- **bar**: For horizontal comparisons (e.g., customer rankings)
+- **line**: For trends over time (e.g., monthly sales) - use "time" and "value" fields
+- **pie**: For proportions/percentages (e.g., market share) - use "category" and "value" fields
 
 **Important**: Always wrap chart JSON in a proper markdown code block with \`\`\`vis-chart at the start and \`\`\` at the end. Never output "Visualization vis-chart {...} vis-chart" - that's incorrect.
 
@@ -146,9 +182,9 @@ Here's a comparison chart:
 {
   "type": "column",
   "data": [
-    { "product": "I1NOVW-98", "Catalogue": 85.00, "Actual": 15.70 },
-    { "product": "IZN59593939-98", "Catalogue": 154.80, "Actual": 32.16 },
-    { "product": "I899OVW-98", "Catalogue": 110.52, "Actual": 28.50 }
+    { "category": "I1NOVW-98", "Catalogue": 85.00, "Actual": 15.70 },
+    { "category": "IZN59593939-98", "Catalogue": 154.80, "Actual": 32.16 },
+    { "category": "I899OVW-98", "Catalogue": 110.52, "Actual": 28.50 }
   ]
 }
 \`\`\`

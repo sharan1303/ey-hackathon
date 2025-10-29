@@ -58,6 +58,7 @@ body {
 
 /* Chat message styling */
 .chat-message-user {
+  color: var(--foreground);
   background: var(--user-bubble);
   color: white;
   border-radius: 12px;
@@ -67,8 +68,8 @@ body {
 }
 
 .chat-message-ai {
-  background: var(--ai-bubble);
   color: var(--foreground);
+  background: var(--ai-bubble);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 12px 16px;
@@ -211,4 +212,35 @@ body {
   border-radius: 8px;
   padding: 16px;
   margin: 16px 0;
+}
+
+/* Override Ant Design Bubble backgrounds */
+.ant-bubble {
+  background: transparent !important;
+}
+
+.ant-bubble-content {
+  background: transparent !important;
+}
+
+.ant-bubble-layout {
+  background: transparent !important;
+}
+
+/* Remove any grey backgrounds from Bubble List items */
+.ant-bubble-list-item {
+  background: transparent !important;
+}
+
+/* Custom bubble wrapper styles */
+.assistant-bubble-wrapper .ant-bubble,
+.assistant-bubble-wrapper
+  .ant-bubble
+  *:not(.markdown-content):not(.markdown-content *) {
+  background: transparent !important;
+}
+
+.user-bubble-wrapper .ant-bubble-content {
+  background: #1677ff !important;
+  color: white !important;
 }
