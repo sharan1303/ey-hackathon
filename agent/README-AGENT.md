@@ -42,25 +42,47 @@ This agent provides intelligent analysis of 736K+ sales transactions spanning Ma
 ## Project Structure
 
 ```
-app/
-├── src/
-│   ├── lib/
-│   │   └── database.ts          # Database query functions
-│   ├── tools/
-│   │   ├── margin-analysis-tool.ts      # Margin analysis tool
-│   │   ├── profitability-tool.ts        # Profitability tool
-│   │   └── executive-summary-tool.ts    # Executive summary tool
-│   ├── agents/
-│   │   └── pricing-agent.ts     # Main pricing agent
-│   ├── mastra/
-│   │   └── index.ts             # Mastra instance
-│   └── examples/
-│       ├── query-pricing-agent.ts       # Multiple example queries
-│       └── interactive-query.ts         # Single query CLI
-├── CORE_QUERY_FUNCTIONS.md      # Complete function specifications
-├── QUERY_FUNCTION_REFERENCE.md  # Quick reference guide
-├── DATABASE_ANALYSIS_SUMMARY.md # Database analysis
-└── package.json
+agent/
+├── app/                                   # Next.js app directory
+│   ├── api/                               # API & Mastra integration
+│   │   └── src/
+│   │       ├── mastra/                    # Mastra agent (Direct Integration)
+│   │       │   ├── agents/
+│   │       │   │   └── pricing-agent.ts           # Main pricing agent
+│   │       │   ├── tools/
+│   │       │   │   ├── margin-analysis-tool.ts    # Margin analysis tool
+│   │       │   │   ├── customer-analysis-tool.ts  # Customer analysis tool
+│   │       │   │   ├── product-analysis-tool.ts   # Product analysis tool
+│   │       │   │   ├── pricing-analysis-tool.ts   # Pricing analysis tool
+│   │       │   │   ├── executive-summary-tool.ts  # Executive summary tool
+│   │       │   │   ├── discount-returns-tool.ts   # Discount & returns tool
+│   │       │   │   ├── trends-forecasting-tool.ts # Trends forecasting tool
+│   │       │   │   └── data-quality-tool.ts       # Data quality tool
+│   │       │   ├── lib/
+│   │       │   │   ├── database.ts                # Database connection
+│   │       │   │   └── queries/                   # Query functions
+│   │       │   │       ├── base-queries/          # Core query functions
+│   │       │   │       ├── get-customer-profitability.ts
+│   │       │   │       ├── get-product-performance.ts
+│   │       │   │       ├── get-executive-dashboard.ts
+│   │       │   │       ├── get-problem-areas-report.ts
+│   │       │   │       └── index.ts
+│   │       │   ├── examples/
+│   │       │   │   ├── query-pricing-agent.ts     # Multiple example queries
+│   │       │   │   └── interactive-query.ts       # Single query CLI
+│   │       │   └── index.ts                       # Mastra instance
+│   │       └── docs/                              # Documentation
+│   │           ├── CORE_QUERY_FUNCTIONS.md        # Complete function specs
+│   │           ├── QUERY_FUNCTION_REFERENCE.md    # Quick reference
+│   │           └── DATABASE_ANALYSIS_SUMMARY.md   # Database analysis
+│   ├── page.tsx                           # Home page
+│   ├── layout.tsx                         # Root layout
+│   └── globals.css                        # Global styles
+├── public/                                # Static assets
+├── package.json
+├── tsconfig.json
+├── next.config.ts
+└── .env.example                           # Environment variables template
 ```
 
 ## Setup
@@ -73,7 +95,7 @@ app/
 pnpm install
 ```
 
-2. Create `.env` file in the `/app` directory:
+2. Create `.env` file in the `/agent` directory:
 
 ```bash
 # Copy from example
