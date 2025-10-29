@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bubble, Sender, useXAgent, useXChat } from '@ant-design/x';
 import type { GetProp } from 'antd';
-import { UserOutlined, RobotOutlined } from '@ant-design/icons';
 import { MessageBubble } from './message-bubble';
 import {
   saveConversation,
@@ -338,9 +337,13 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
                 }}
               >
                 {[
-                  'How many unique customers did we have in 2024?',
-                  'Which products are most frequently returned?',
-                  "What's the margin for 2024?",
+                  
+                  'What was the margin trend for 2024?',
+                  'How did discount % affect sales volume?',
+                  'At what price should the customer Gripz Isla Ltd (Belfast) charge for the product IEZ27ITY7949?',
+                  'What are the top 10 products by margin?',
+                  'Identify products with pricing inconsistency in 2023',
+                  
                 ].map((suggestion) => (
                   <div
                     key={suggestion}
