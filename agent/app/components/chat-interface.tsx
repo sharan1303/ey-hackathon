@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Bubble, Sender, useXAgent, useXChat } from '@ant-design/x';
 import type { GetProp } from 'antd';
 import { MessageBubble } from './message-bubble';
+import { SettingsPanel } from './settings-panel';
 import {
   saveConversation,
   getConversations,
@@ -40,6 +41,7 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [historicalMessages, setHistoricalMessages] = useState<ChatMessage[]>([]);
   const [conversationTitle, setConversationTitle] = useState<string>('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Track tool calls separately
   const [toolCalls, setToolCalls] = useState<Map<string, ChatMessage>>(new Map());
@@ -416,6 +418,9 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
         background: 'white',
       }}
     >
+      {/* Settings Panel */}
+      <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
       {/* Header */}
       <div
         style={{
@@ -431,6 +436,44 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>
           {conversationTitle || 'New chat'}
         </h2>
+        
+        {/* Settings Button */}
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          aria-label="Open settings"
+          style={{
+            width: 32,
+            height: 32,
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 6,
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#f5f5f5';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1v6m0 6v6m9.66-9.66l-5.197 5.197M6.464 6.464L1.267 1.267M23 12h-6m-6 0H1m20.732 6.732l-5.197-5.197M6.464 17.536L1.267 22.733" />
+          </svg>
+        </button>
       </div>
 
       {/* Messages Area */}
