@@ -14,6 +14,7 @@ import {
 } from '../lib/chat-api';
 import { generateTitle } from '../lib/message-parser';
 import { getBrowserDatabase } from '../lib/browser-db';
+import Image from 'next/image';
 
 type BubbleItem = {
   key: string;
@@ -456,12 +457,25 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
             }}
           >
             <div style={{ maxWidth: 900 }}>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <Image
+                  src="/volt.svg"
+                  alt="Logo"
+                  width={64}
+                  height={64}
+                  style={{
+                    objectFit: 'contain',
+                  }}
+                />
+              </div>
                 <h1 style={{ fontSize: 32, fontWeight: 600, marginBottom: 16 }}>
-                Say hi to Volt
+                Welcome, how can I help?
                 </h1>
-              <p style={{ fontSize: 16, color: '#666', marginBottom: 48 }}>
-                I&apos;m here to help you analyse pricing, profitability, and identify opportunities
-                in your sales data. Ask me anything about margins, customer performance, or
+              <p style={{ fontSize: 16, color: '#666' }}>
+                I&apos;m here to help you analyse pricing, profitability, and identify opportunities in your sales data.
+              </p>
+              <p style={{ fontSize: 16, color: '#666', marginBottom: 20 }}>
+                Ask me anything about margins, customer performance, or
                 product pricing.
               </p>
 
