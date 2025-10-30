@@ -25,13 +25,13 @@ export interface ProblemAreasReport {
 /**
  * Get problem areas report
  */
-export function getProblemAreasReport(
+export async function getProblemAreasReport(
   startDate?: string,
   endDate?: string
-): ProblemAreasReport {
+): Promise<ProblemAreasReport> {
   // Top 10 negative margin customers
   // Include returns and credit notes to capture true margin erosion
-  const negativeCustomers = getCustomerProfitability({
+  const negativeCustomers = (await getCustomerProfitability({
     startDate,
     endDate,
     includeReturns: true,
@@ -39,7 +39,7 @@ export function getProblemAreasReport(
     sortBy: 'margin',
     order: 'asc',
     limit: 10
-  }).map(c => ({
+  })).map(c => ({
     customer_code: c.customer_code,
     customer_name: c.customer_name,
     margin: c.gross_margin
@@ -47,7 +47,7 @@ export function getProblemAreasReport(
   
   // Top 10 negative margin products
   // Product performance now includes returns by default for accurate margin calculation
-  const negativeProducts = getProductPerformance({
+  const negativeProducts = (await getProductPerformance({
     startDate,
     endDate,
     maxMarginPercent: 0,
@@ -55,14 +55,14 @@ export function getProblemAreasReport(
     sortBy: 'margin',
     order: 'asc',
     limit: 10
-  }).map(p => ({
+  })).map(p => ({
     item_code: p.item_code,
     product_description: p.product_description,
     margin: p.margin
   }));
   
   // High discount transactions (>20%)
-  const transactions = getSalesTransactions({
+  const transactions = await getSalesTransactions({
     startDate,
     endDate,
     includeReturns: false,
@@ -92,13 +92,13 @@ export function getProblemAreasReport(
   
   // Inactive high-value customers (>90 days no purchase, >€10k lifetime)
   // Get all customer sales (lifetime, not filtered by date)
-  const allCustomerSales = getCustomerSales({
+  const allCustomerSales = await getCustomerSales({
     includeSamples: false,
     includeReturns: false
   });
   
   // Get last transaction date for each customer
-  const allTransactions = getSalesTransactions({
+  const allTransactions = await getSalesTransactions({
     includeSamples: false,
     includeReturns: false,
     documentTypes: ['INV']

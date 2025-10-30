@@ -35,17 +35,17 @@ export function getProductPerformance(
   sortBy?: 'revenue' | 'margin' | 'quantity' | 'margin_percent',
   limit?: number,
   order?: 'asc' | 'desc'
-): ProductPerformance[];
+): Promise<ProductPerformance[]>;
 export function getProductPerformance(
   filters: ProductPerformanceFilters
-): ProductPerformance[];
-export function getProductPerformance(
+): Promise<ProductPerformance[]>;
+export async function getProductPerformance(
   startDateOrFilters?: string | ProductPerformanceFilters,
   endDate?: string,
   sortBy: 'revenue' | 'margin' | 'quantity' | 'margin_percent' = 'revenue',
   limit = 100,
   order: 'asc' | 'desc' = 'desc'
-): ProductPerformance[] {
+): Promise<ProductPerformance[]> {
   // Handle both function signatures
   let filters: ProductPerformanceFilters;
   if (typeof startDateOrFilters === 'object') {
@@ -74,7 +74,7 @@ export function getProductPerformance(
   
   // Get base product sales data with SQL-level filters
   // Include returns and credit notes for accurate margin erosion calculation
-  const productSales = getProductSales({
+  const productSales = await getProductSales({
     startDate,
     endDate: filterEndDate,
     includeReturns: true,

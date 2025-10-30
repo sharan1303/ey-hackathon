@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { pricingAgent } from '../../api/src/mastra';
+import { queryExecutorContext } from '../../api/src/mastra/lib/query-executor';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -66,12 +67,17 @@ export async function POST(req: NextRequest) {
         try {
           console.log('🚀 Starting stream...');
           
-          // Track tool calls that have been started
-          const toolCallsInProgress = new Map<string, { toolName: string; args: Record<string, unknown> }>();
-          let stepCounter = 0;
-          
-          // First, collect the stream result with callback
-          const streamResult = await pricingAgent.stream(
+          // Set up query executor context for this request
+          // This allows database queries to send query-request events to the client
+          await queryExecutorContext.run(
+            { encoder, controller, threadId: conversationId },
+            async () => {
+              // Track tool calls that have been started
+              const toolCallsInProgress = new Map<string, { toolName: string; args: Record<string, unknown> }>();
+              let stepCounter = 0;
+              
+              // First, collect the stream result with callback
+              const streamResult = await pricingAgent.stream(
             [{ role: 'user', content: message }],
             {
               threadId: conversationId,
@@ -145,24 +151,27 @@ export async function POST(req: NextRequest) {
             }
           );
 
-          console.log('📝 Starting to stream text...');
-          let chunkCount = 0;
-          // Stream text chunks
-          for await (const chunk of streamResult.textStream) {
-            chunkCount++;
-            const event = {
-              type: 'text-delta',
-              content: chunk,
-            };
-            
-            if (chunkCount === 1) {
-              console.log('📤 Sending first text chunk:', chunk.substring(0, 50));
-            }
-            
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-          }
+              console.log('📝 Starting to stream text...');
+              let chunkCount = 0;
+              // Stream text chunks
+              for await (const chunk of streamResult.textStream) {
+                chunkCount++;
+                const event = {
+                  type: 'text-delta',
+                  content: chunk,
+                };
+                
+                if (chunkCount === 1) {
+                  console.log('📤 Sending first text chunk:', chunk.substring(0, 50));
+                }
+                
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+              }
 
-          console.log(`✅ Streaming complete - sent ${chunkCount} text chunks`);
+              console.log(`✅ Streaming complete - sent ${chunkCount} text chunks`);
+            }
+          ); // End queryExecutorContext.run
+          
           controller.close();
         } catch (error) {
           console.error('❌ Streaming error:', error);

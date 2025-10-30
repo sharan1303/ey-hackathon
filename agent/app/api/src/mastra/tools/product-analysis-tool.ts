@@ -135,7 +135,7 @@ export const productAnalysisTool = createTool({
     
     if (analysisType === 'slow_moving') {
       // Identify slow-moving products
-      const products = getProductSales({
+      const products = await getProductSales({
         startDate,
         endDate,
         includeReturns: false,
@@ -147,7 +147,7 @@ export const productAnalysisTool = createTool({
       });
       
       // Get transactions to calculate last sale date
-      const allTransactions = getSalesTransactions({
+      const allTransactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -213,7 +213,7 @@ export const productAnalysisTool = createTool({
       
     } else if (analysisType === 'product_mix') {
       // ABC classification by revenue contribution
-      const products = getProductSales({
+      const products = await getProductSales({
         startDate,
         endDate,
         includeReturns: false,
@@ -283,7 +283,7 @@ export const productAnalysisTool = createTool({
       
     } else if (analysisType === 'cross_sell') {
       // Find products frequently bought together
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -373,7 +373,7 @@ export const productAnalysisTool = createTool({
       
     } else {
       // cannibalization analysis
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,

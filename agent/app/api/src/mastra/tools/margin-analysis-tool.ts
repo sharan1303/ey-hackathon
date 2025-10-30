@@ -102,7 +102,7 @@ export const marginAnalysisTool = createTool({
     });
     
     if (analyzeBy === 'customer') {
-      const results = getCustomerProfitability({
+      const results = await getCustomerProfitability({
         startDate,
         endDate,
         includeReturns,
@@ -135,7 +135,7 @@ export const marginAnalysisTool = createTool({
         quantity: r.total_quantity
       }));
     } else {
-      const results = getProductPerformance({
+      const results = await getProductPerformance({
         startDate,
         endDate,
         sortBy: sortBy as 'revenue' | 'margin' | 'quantity' | 'margin_percent',
