@@ -1,0 +1,253 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f5f5;
+  --foreground: #262626;
+  --primary: #1677ff;
+  --sidebar-bg: #ffffff;
+  --user-bubble: #1677ff;
+  --ai-bubble: #ffffff;
+  --border-color: #e5e7eb;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Chat message styling */
+.chat-message-user {
+  color: var(--foreground);
+  background: var(--user-bubble);
+  color: white;
+  border-radius: 12px;
+  padding: 12px 16px;
+  max-width: 70%;
+  word-wrap: break-word;
+}
+
+.chat-message-ai {
+  color: var(--foreground);
+  background: var(--ai-bubble);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 16px;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+/* Markdown content styling */
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content p {
+  margin-bottom: 1em;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.markdown-content li {
+  margin-bottom: 0.5em;
+}
+
+/* Tool call bubble wrapper */
+.tool-call-bubble-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  margin: 12px 0;
+}
+
+.markdown-content code {
+  background: #f4f4f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.9em;
+}
+
+.markdown-content pre {
+  background: #f4f4f5;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.markdown-content th {
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+/* GPT-Vis styling */
+.markdown-content .gpt-vis-container {
+  margin: 16px 0;
+  min-height: 300px;
+}
+
+/* Override Chinese labels in GPT-Vis tabs with English */
+.markdown-content [role="tab"] {
+  font-size: 0; /* Hide Chinese text */
+}
+
+.markdown-content [role="tab"]::before {
+  font-size: 14px; /* Restore font size for icon/content */
+  display: inline-block;
+}
+
+.markdown-content [role="tablist"] [role="tab"]:nth-child(1)::after {
+  content: "Chart";
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+.markdown-content [role="tablist"] [role="tab"]:nth-child(2)::after {
+  content: "Code";
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+/* Override download button text */
+.markdown-content button[class*="download"]::after {
+  content: "Download";
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+.markdown-content canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Chart visualization blocks */
+.markdown-content pre[class*="language-vis-chart"],
+.markdown-content code[class*="language-vis-chart"] {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+/* Ensure GPT-Vis charts have proper spacing */
+.markdown-content > div[class*="gpt-vis"] {
+  margin: 16px 0;
+}
+
+/* Style for inline code blocks that are charts */
+.markdown-content .vis-chart-wrapper {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+/* Override Ant Design Bubble backgrounds */
+.ant-bubble {
+  background: transparent !important;
+}
+
+.ant-bubble-content {
+  background: transparent !important;
+}
+
+.ant-bubble-layout {
+  background: transparent !important;
+}
+
+/* Remove any grey backgrounds from Bubble List items */
+.ant-bubble-list-item {
+  background: transparent !important;
+}
+
+/* Custom bubble wrapper styles */
+.assistant-bubble-wrapper .ant-bubble,
+.assistant-bubble-wrapper
+  .ant-bubble
+  *:not(.markdown-content):not(.markdown-content *) {
+  background: transparent !important;
+}
+
+.user-bubble-wrapper .ant-bubble-content {
+  background: #1677ff !important;
+  color: white !important;
+}

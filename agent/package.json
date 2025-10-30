@@ -1,0 +1,65 @@
+{
+  "name": "agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "agent:dev": "tsx app/api/src/mastra/examples/query-pricing-agent.ts",
+    "agent:query": "tsx app/api/src/mastra/examples/interactive-query.ts",
+    "agent:playground": "npx mastra dev --dir ./app/api/src/mastra",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/azure": "^2.0.57",
+    "@ai-sdk/openai": "^2.0.56",
+    "@ant-design/icons": "^6.1.0",
+    "@ant-design/x": "^1.6.1",
+    "@antv/gpt-vis": "^0.5.9",
+    "@libsql/client": "^0.15.15",
+    "@mastra/core": "^0.23.1",
+    "@mastra/libsql": "^0.16.1",
+    "@mastra/loggers": "^0.10.18",
+    "@mastra/memory": "^0.15.9",
+    "@tanstack/react-query": "^5.90.5",
+    "antd": "^5.27.6",
+    "better-sqlite3": "^12.4.1",
+    "decimal.js-light": "^2.5.1",
+    "dotenv": "^16.6.1",
+    "libsql": "^0.4.6",
+    "next": "16.0.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-markdown": "^10.1.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.6",
+    "typescript": "^5"
+  },
+  "pnpm": {
+    "overrides": {
+      "ai": "^4.3.19"
+    },
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild",
+      "protobufjs",
+      "sharp",
+      "unrs-resolver",
+      "@libsql/client",
+      "libsql"
+    ]
+  }
+}

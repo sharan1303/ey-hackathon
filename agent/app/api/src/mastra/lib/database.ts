@@ -9,8 +9,8 @@ const file = fileURLToPath(import.meta.url);
 const dir = dirname(file);
 
 // Database connection - path relative to this file, not process.cwd()
-// From /app/api/src/mastra/lib/ -> 5 levels up to /ey-hackathon/ then /data/
-let DB_PATH = process.env.DATABASE_PATH || path.join(dir, '../../../../../data/voltura_data_cleaned.db');
+// From /agent/app/api/src/mastra/lib/ -> 6 levels up to /ey-hackathon/ then /data/
+let DB_PATH = process.env.DATABASE_PATH || path.join(dir, '../../../../../../data/voltura_data_cleaned.db');
 
 // Resolve to absolute path and verify it exists
 DB_PATH = resolve(DB_PATH);
@@ -23,9 +23,9 @@ if (!existsSync(DB_PATH)) {
   
   // Try alternative path calculations
   const alternatives = [
-    resolve(dir, '../../../../../data/voltura_data_cleaned.db'),
-    resolve(process.cwd(), 'data/voltura_data_cleaned.db'),
-    resolve(process.cwd(), '../../../data/voltura_data_cleaned.db'),
+    resolve(dir, '../../../../../../data/voltura_data_cleaned.db'),
+    resolve(process.cwd(), '../data/voltura_data_cleaned.db'),
+    resolve(process.cwd(), '../../data/voltura_data_cleaned.db'),
     '/Users/Sharan.Umavassee/Source/ey-hackathon/data/voltura_data_cleaned.db'
   ];
   
