@@ -1,56 +1,51 @@
-import Database from 'better-sqlite3';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
-import { existsSync } from 'fs';
+import { executeQuery, QueryResult } from './query-executor';
 
-// Get the directory of the current module
-const file = fileURLToPath(import.meta.url);
-const dir = dirname(file);
-
-// Database connection - path relative to this file, not process.cwd()
-// From /agent/app/api/src/mastra/lib/ -> 6 levels up to /ey-hackathon/ then /data/
-let DB_PATH = process.env.DATABASE_PATH || path.join(dir, '../../../../../../data/voltura_data_cleaned.db');
-
-// Resolve to absolute path and verify it exists
-DB_PATH = resolve(DB_PATH);
-
-// Debug logging for troubleshooting
-if (!existsSync(DB_PATH)) {
-  console.error('❌ Database file not found at:', DB_PATH);
-  console.error('Current module dir:', dir);
-  console.error('Trying alternative paths...');
-  
-  // Try alternative path calculations
-  const alternatives = [
-    resolve(dir, '../../../../../../data/voltura_data_cleaned.db'),
-    resolve(process.cwd(), '../data/voltura_data_cleaned.db'),
-    resolve(process.cwd(), '../../data/voltura_data_cleaned.db'),
-    '/Users/Sharan.Umavassee/Source/ey-hackathon/data/voltura_data_cleaned.db'
-  ];
-  
-  for (const altPath of alternatives) {
-    if (existsSync(altPath)) {
-      console.log('✅ Found database at:', altPath);
-      DB_PATH = altPath;
-      break;
-    }
-  }
-  
-  if (!existsSync(DB_PATH)) {
-    throw new Error(`Database file not found. Searched: ${DB_PATH}`);
-  }
-} else {
-  console.log('✅ Database found at:', DB_PATH);
+/**
+ * Execute a SQL query and return the results
+ * This now uses the browser-based database via the query executor
+ */
+export async function query(sql: string, params?: unknown[]): Promise<QueryResult> {
+  return executeQuery(sql, params);
 }
 
-let db: Database.Database | null = null;
+/**
+ * Execute a SQL query and return all rows as objects
+ */
+export async function queryAll<T = Record<string, unknown>>(
+  sql: string,
+  params?: unknown[]
+): Promise<T[]> {
+  const result = await executeQuery(sql, params);
+  
+  // Convert rows from arrays to objects
+  return result.values.map((row: unknown[]) => {
+    const obj: Record<string, unknown> = {};
+    result.columns.forEach((col: string, index: number) => {
+      obj[col] = row[index];
+    });
+    return obj as T;
+  });
+}
 
-export function getDb(): Database.Database {
-  if (!db) {
-    db = new Database(DB_PATH, { readonly: true });
+/**
+ * Execute a SQL query and return the first row as an object
+ */
+export async function queryOne<T = Record<string, unknown>>(
+  sql: string,
+  params?: unknown[]
+): Promise<T | null> {
+  const result = await executeQuery(sql, params);
+  
+  if (result.values.length === 0) {
+    return null;
   }
-  return db;
+  
+  const obj: Record<string, unknown> = {};
+  result.columns.forEach((col: string, index: number) => {
+    obj[col] = result.values[0][index];
+  });
+  
+  return obj as T;
 }
 
 // Helper to format dates for SQL
@@ -71,10 +66,3 @@ export function getDefaultDateRange(): { startDate: string; endDate: string } {
     endDate: endDate.toISOString().split('T')[0]
   };
 }
-
-// Close database on process exit
-process.on('exit', () => {
-  if (db) {
-    db.close();
-  }
-});

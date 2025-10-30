@@ -13,6 +13,7 @@ import {
   type ToolCallData,
 } from '../lib/chat-api';
 import { generateTitle } from '../lib/message-parser';
+import { getBrowserDatabase } from '../lib/browser-db';
 
 type BubbleItem = {
   key: string;
@@ -41,6 +42,55 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
 
   // Track tool calls separately
   const [toolCalls, setToolCalls] = useState<Map<string, ChatMessage>>(new Map());
+
+  /**
+   * Handle query request from server by executing it in browser database
+   * and sending the result back to the server
+   */
+  const handleQueryRequest = async (queryId: string, sql: string, params: unknown[]) => {
+    try {
+      console.log(`🗄️ Executing query ${queryId} in browser...`);
+      
+      // Get browser database instance
+      const browserDB = getBrowserDatabase();
+      
+      // Execute the query
+      const result = await browserDB.query(sql, params);
+      
+      console.log(`✅ Query ${queryId} complete: ${result.values.length} rows`);
+      
+      // Send result back to server
+      await fetch('/api/query-callback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          queryId,
+          result: {
+            columns: result.columns,
+            values: result.values,
+          },
+        }),
+      });
+      
+      console.log(`📤 Query result ${queryId} sent to server`);
+    } catch (error) {
+      console.error(`❌ Query ${queryId} failed:`, error);
+      
+      // Send error back to server
+      await fetch('/api/query-callback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          queryId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }),
+      });
+    }
+  };
 
   // Create agent with custom request handler that supports streaming
   const [agent] = useXAgent({
@@ -132,6 +182,12 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
                     
                     console.log('✅ Tool result received:', event.toolName);
                   }
+                } else if (event.type === 'query-request') {
+                  // Execute query in browser database and send result back to server
+                  console.log('🗄️ Query request received:', event.queryId);
+                  handleQueryRequest(event.queryId, event.sql, event.params).catch((error) => {
+                    console.error('❌ Query execution failed:', error);
+                  });
                 } else if (event.type === 'text-delta') {
                   // Accumulate text content
                   fullContent += event.content;

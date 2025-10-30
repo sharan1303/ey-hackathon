@@ -23,12 +23,12 @@ export interface ExecutiveDashboard {
 /**
  * Get executive dashboard with high-level KPIs
  */
-export function getExecutiveDashboard(
+export async function getExecutiveDashboard(
   startDate?: string,
   endDate?: string
-): ExecutiveDashboard {
+): Promise<ExecutiveDashboard> {
   // Get all non-return, non-sample transactions
-  const transactions = getSalesTransactions({
+  const transactions = await getSalesTransactions({
     startDate,
     endDate,
     includeReturns: false,
@@ -57,7 +57,7 @@ export function getExecutiveDashboard(
   );
   
   // Calculate top 10 customer concentration
-  const customerSales = getCustomerSales({
+  const customerSales = await getCustomerSales({
     startDate,
     endDate,
     includeReturns: false,
@@ -73,7 +73,7 @@ export function getExecutiveDashboard(
   const top10ConcentrationPercent = calculatePercentageOfTotal(top10Revenue, totalRevenue);
   
   // Negative margin metrics - include returns for accurate margin erosion
-  const negativeMargins = getCustomerProfitability({
+  const negativeMargins = await getCustomerProfitability({
     startDate,
     endDate,
     includeReturns: true,
@@ -85,7 +85,7 @@ export function getExecutiveDashboard(
   const negativeMarginAmount = negativeMargins.reduce((sum, c) => sum + c.gross_margin, 0);
   
   // Return rate calculation
-  const allTransactions = getSalesTransactions({
+  const allTransactions = await getSalesTransactions({
     startDate,
     endDate,
     includeReturns: true,
