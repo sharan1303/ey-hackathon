@@ -10,8 +10,17 @@ import {
   getConversationMessages,
   type Conversation,
   type ChatMessage,
+  type ToolCallData,
 } from '../lib/chat-api';
 import { generateTitle } from '../lib/message-parser';
+
+type BubbleItem = {
+  key: string;
+  loading: boolean;
+  role: 'user' | 'assistant' | 'tool-call';
+  content: string;
+  toolCall?: ToolCallData;
+};
 
 interface ChatInterfaceProps {
   conversationId: string;
@@ -470,18 +479,21 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
         {bubbleItems.length > 0 && (
           <Bubble.List
             roles={roles}
-            items={bubbleItems.map((item) => ({
-              ...item,
-              content: (
-                <MessageBubble
-                  content={item.content as string}
-                  role={item.role}
-                  loading={item.loading}
-                  typing={item.role === 'assistant' && item.loading}
-                  toolCall={'toolCall' in item ? item.toolCall : undefined}
-                />
-              ),
-            }))}
+            items={bubbleItems.map((item) => {
+              const { toolCall, ...bubbleProps } = item as BubbleItem;
+              return {
+                ...bubbleProps,
+                content: (
+                  <MessageBubble
+                    content={item.content as string}
+                    role={item.role}
+                    loading={item.loading}
+                    typing={item.role === 'assistant' && item.loading}
+                    toolCall={toolCall}
+                  />
+                ),
+              };
+            })}
           />
         )}
 

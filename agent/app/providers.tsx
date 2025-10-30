@@ -1,7 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConfigProvider } from 'antd';
+import { App, ConfigProvider } from 'antd';
 import enUS from 'antd/locale/en_US';
 import { useState, type ReactNode } from 'react';
 
@@ -40,7 +40,9 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider theme={antdTheme} locale={enUS}>
-        {children}
+        <App>
+          {children}
+        </App>
       </ConfigProvider>
     </QueryClientProvider>
   );

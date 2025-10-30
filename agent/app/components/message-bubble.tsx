@@ -1,6 +1,6 @@
 import { Bubble } from '@ant-design/x';
 import { CopyOutlined } from '@ant-design/icons';
-import { message as antdMessage } from 'antd';
+import { App } from 'antd';
 import { GPTVisLite, withDefaultChartCode } from '@antv/gpt-vis';
 import { DataVisualizer } from './data-visualizer';
 import { extractTables } from '../lib/message-parser';
@@ -19,12 +19,13 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ content, role, loading, typing, toolCall }: MessageBubbleProps) {
+  const { message } = App.useApp();
   const isUser = role === 'user';
   const isToolCall = role === 'tool-call';
 
   const handleCopy = () => {
     navigator.clipboard.writeText(content);
-    antdMessage.success('Copied to clipboard');
+    message.success('Copied to clipboard');
   };
 
   // If this is a tool call message, render the ToolCallBubble component

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Collapse, message as antdMessage } from 'antd';
+import { App, Collapse } from 'antd';
 import { CopyOutlined, RightOutlined } from '@ant-design/icons';
 import type { ToolCallData } from '../lib/chat-api';
 
@@ -10,15 +10,16 @@ interface ToolCallBubbleProps {
 }
 
 export function ToolCallBubble({ toolCall }: ToolCallBubbleProps) {
+  const { message } = App.useApp();
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    antdMessage.success(`${label} copied to clipboard`);
+    message.success(`${label} copied to clipboard`);
   };
 
-  const formatJSON = (obj: any): string => {
+  const formatJSON = (obj: unknown): string => {
     try {
       return JSON.stringify(obj, null, 2);
     } catch {
