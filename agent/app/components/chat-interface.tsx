@@ -5,6 +5,8 @@ import { Bubble, Sender, useXAgent, useXChat } from '@ant-design/x';
 import type { GetProp } from 'antd';
 import { MessageBubble } from './message-bubble';
 import { SettingsPanel } from './settings-panel';
+import { MobileWelcomeScreen } from './welcome-screen-mobile';
+import { DesktopWelcomeScreen } from './welcome-screen-desktop';
 import {
   saveConversation,
   getConversations,
@@ -15,7 +17,6 @@ import {
 } from '../lib/chat-api';
 import { generateTitle } from '../lib/message-parser';
 import { getBrowserDatabase } from '../lib/browser-db';
-import Image from 'next/image';
 
 type BubbleItem = {
   key: string;
@@ -28,6 +29,8 @@ type BubbleItem = {
 interface ChatInterfaceProps {
   conversationId: string;
   onConversationUpdate?: (conversation: Conversation) => void;
+  isMobile?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 const roles: GetProp<typeof Bubble.List, 'roles'> = {
@@ -35,7 +38,7 @@ const roles: GetProp<typeof Bubble.List, 'roles'> = {
   user: {placement: 'end'}
 };
 
-export function ChatInterface({ conversationId, onConversationUpdate }: ChatInterfaceProps) {
+export function ChatInterface({ conversationId, onConversationUpdate, isMobile, onToggleSidebar }: ChatInterfaceProps) {
   const [content, setContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
@@ -426,16 +429,59 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
         style={{
           background: 'white',
           borderBottom: '1px solid #e5e7eb',
-          padding: '16px 24px',
+          padding: isMobile ? '12px 16px' : '16px 24px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           height: 56,
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>
-          {conversationTitle || 'New chat'}
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Hamburger Menu Button - Mobile Only */}
+          {isMobile && (
+            <button
+              onClick={onToggleSidebar}
+              aria-label="Toggle sidebar"
+              style={{
+                width: 32,
+                height: 32,
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 6,
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f5f5f5';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          )}
+          
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>
+            {conversationTitle || 'New chat'}
+          </h2>
+        </div>
         
         {/* Settings Button */}
         <button
@@ -481,112 +527,27 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '24px',
+          padding: isMobile ? '16px' : '24px',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
         {isFirstMessage && historicalMessages.length === 0 && messages.length === 0 && (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              padding: '40px 20px',
-              gap: 48,
-            }}
-          >
-            <div style={{ maxWidth: 900 }}>
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <Image
-                  src="/volt.svg"
-                  alt="Logo"
-                  width={64}
-                  height={64}
-                  style={{
-                    objectFit: 'contain',
-                  }}
-                />
-              </div>
-                <h1 style={{ fontSize: 32, fontWeight: 600, marginBottom: 16 }}>
-                Welcome, how can I help?
-                </h1>
-              <p style={{ fontSize: 16, color: '#666' }}>
-                I&apos;m here to help you analyse pricing, profitability, and identify opportunities in your sales data.
-              </p>
-              <p style={{ fontSize: 16, color: '#666', marginBottom: 20 }}>
-                Ask me anything about margins, customer performance, or
-                product pricing.
-              </p>
-
-              {/* Centered Input */}
-              <div style={{ marginBottom: 32 }}>
-                <Sender
-                  value={content}
-                  onChange={setContent}
-                  onSubmit={handleSubmit}
-                  placeholder="Press Shift + Enter to send message"
-                  loading={agent.isRequesting()}
-                  style={{
-                    maxWidth: 900,
-                    margin: '0 auto',
-                  }}
-                />
-              </div>
-
-              {/* Horizontal Scrollable Suggestions */}
-              <div
-                style={{
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                  display: 'flex',
-                  gap: 12,
-                  paddingBottom: 8,
-                  scrollbarWidth: 'thin',
-                }}
-              >
-                {[
-                  
-                  'What was the margin trend for 2024?',
-                  'How did discount % affect sales volume?',
-                  'At what price should the customer Gripz Isla Ltd (Belfast) charge for the product IEZ27ITY7949?',
-                  'What are the top 10 products by margin?',
-                  'Identify products with pricing inconsistency in 2023',
-                  
-                ].map((suggestion) => (
-                  <div
-                    key={suggestion}
-                    onClick={() => handleSubmit(suggestion)}
-                    style={{
-                      padding: '10px 16px',
-                      background: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 20,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      whiteSpace: 'nowrap',
-                      fontSize: 14,
-                      color: '#262626',
-                      flexShrink: 0,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#1677ff';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(22, 119, 255, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#e5e7eb';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  >
-                    {suggestion}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          isMobile ? (
+            <MobileWelcomeScreen
+              content={content}
+              onContentChange={setContent}
+              onSubmit={handleSubmit}
+              isLoading={agent.isRequesting()}
+            />
+          ) : (
+            <DesktopWelcomeScreen
+              content={content}
+              onContentChange={setContent}
+              onSubmit={handleSubmit}
+              isLoading={agent.isRequesting()}
+            />
+          )
         )}
 
         {bubbleItems.length > 0 && (
@@ -619,14 +580,14 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
           style={{
             background: 'white',
             borderTop: '1px solid #e5e7eb',
-            padding: '16px 24px',
+            padding: isMobile ? '12px 16px' : '16px 24px',
           }}
         >
           <Sender
             value={content}
             onChange={setContent}
             onSubmit={handleSubmit}
-            placeholder="Ask about pricing, margins, or profitability..."
+            placeholder={isMobile ? "Ask me anything..." : "Ask about pricing, margins, or profitability..."}
             loading={agent.isRequesting()}
             style={{
               maxWidth: 900,

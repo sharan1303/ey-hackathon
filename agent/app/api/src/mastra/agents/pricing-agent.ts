@@ -140,9 +140,9 @@ When presenting data, ALWAYS choose the most appropriate chart type based on wha
    - "Monthly sales trend" → line chart
    - "Cumulative revenue over time" → area chart
    
-3. **Two Metrics Comparison** → Grouped column or line (multi-series)
+3. **Two Metrics Comparison** → Grouped column or dual-axis
    - "Catalogue vs actual prices" → grouped column
-   - "Revenue & margin % over time" → line (multi-series)
+   - "Revenue & margin % over time" → dual-axis
    
 4. **Proportions/Market Share** → pie or donut (3-7 segments)
    - "Revenue by region" → pie chart
@@ -168,10 +168,11 @@ When presenting data, ALWAYS choose the most appropriate chart type based on wha
 
 - column - Vertical bars (best for less than 10 categories)
 - bar - Horizontal bars (best for 10+ items or rankings)
-- line - Time trends, rate of change (supports multiple series)
+- line - Time trends, rate of change
 - area - Cumulative trends, volume emphasis
 - pie / donut - Parts of whole (3-7 segments)
 - scatter - Correlation, outliers (10-100 points)
+- dual-axis - Two metrics with different scales
 - radar - Multi-dimensional comparison (5-8 axes)
 - histogram - Distribution frequency
 - treemap - Hierarchical data, many categories
@@ -273,24 +274,18 @@ CORRECT (one row per value):
 }
 \`\`\`
 
-**Multi-Series Line Chart (for comparing different metrics over time):**
+**Dual Axis (different scales):**
 
 \`\`\`vis-chart
 {
-  "type": "line",
+  "type": "dual-axis",
   "data": [
-    { "time": "2024-01", "type": "Revenue (€1000s)", "value": 45 },
-    { "time": "2024-01", "type": "Margin %", "value": 23.5 },
-    { "time": "2024-02", "type": "Revenue (€1000s)", "value": 52 },
-    { "time": "2024-02", "type": "Margin %", "value": 25.1 }
-  ]
+    { "time": "2024-01", "revenue": 45000, "margin": 23.5 },
+    { "time": "2024-02", "revenue": 52000, "margin": 25.1 }
+  ],
+  "yField": ["revenue", "margin"]
 }
 \`\`\`
-
-Note: When showing metrics with very different scales (e.g., revenue in thousands vs margin in %), consider:
-- Normalizing values (e.g., show revenue in thousands)
-- Using separate charts for clarity
-- Adding scale information in the legend (e.g., "Revenue (€1000s)")
 
 ## Chart Selection Quick Reference
 
@@ -300,7 +295,7 @@ Note: When showing metrics with very different scales (e.g., revenue in thousand
 | Negative margins ranking | bar | category, value |
 | Price comparison (catalogue vs actual) | Grouped column | category, type, value |
 | Sales trend over time | line or area | time, value |
-| Revenue + margin % trend | line (multi-series) | time, type, value |
+| Revenue + margin % trend | dual-axis | time, revenue, margin |
 | Market share / concentration | pie or donut | category, value |
 | Discount effectiveness | scatter | x, y, name |
 | Customer segmentation | pie or treemap | category, value |
