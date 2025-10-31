@@ -173,7 +173,7 @@ export const discountReturnsTool = createTool({
         startDate,
         endDate,
         includeReturns: true,
-        includeSamples: true,
+        includeSamples: false,
         limit: 20000
       });
       

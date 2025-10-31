@@ -138,7 +138,7 @@ export const pricingAnalysisTool = createTool({
       const products = await getProductSales({
         startDate,
         endDate,
-        includeReturns: false,
+        includeReturns: true,
         includeSamples: false,
         itemCodes: itemCode ? [itemCode] : undefined,
         sortBy: 'revenue',
