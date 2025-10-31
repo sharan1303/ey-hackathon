@@ -37,18 +37,18 @@ export function getCustomerProfitability(
   sortBy?: 'margin' | 'revenue' | 'margin_percent',
   limit?: number,
   order?: 'asc' | 'desc'
-): CustomerProfitability[];
+): Promise<CustomerProfitability[]>;
 export function getCustomerProfitability(
   filters: CustomerProfitabilityFilters
-): CustomerProfitability[];
-export function getCustomerProfitability(
+): Promise<CustomerProfitability[]>;
+export async function getCustomerProfitability(
   startDateOrFilters?: string | CustomerProfitabilityFilters,
   endDate?: string,
   includeReturns = true,
   sortBy: 'margin' | 'revenue' | 'margin_percent' = 'margin',
   limit = 100,
   order: 'asc' | 'desc' = 'desc'
-): CustomerProfitability[] {
+): Promise<CustomerProfitability[]> {
   // Handle both function signatures
   let filters: CustomerProfitabilityFilters;
   if (typeof startDateOrFilters === 'object') {
@@ -78,7 +78,7 @@ export function getCustomerProfitability(
   } = filters;
   
   // Get base customer sales data with SQL-level filters
-  const customerSales = getCustomerSales({
+  const customerSales = await getCustomerSales({
     startDate,
     endDate: filterEndDate,
     includeReturns: filterReturns,

@@ -82,7 +82,7 @@ export const executiveSummaryTool = createTool({
     });
     
     if (reportType === 'dashboard') {
-      const dashboard = getExecutiveDashboard(startDate, endDate);
+      const dashboard = await getExecutiveDashboard(startDate, endDate);
       
       logger?.info('Executive dashboard generated', {
         totalRevenue: dashboard.total_revenue.toFixed(2),
@@ -109,7 +109,7 @@ export const executiveSummaryTool = createTool({
         avgDiscountPercent: dashboard.avg_discount_percent
       };
     } else {
-      const problems = getProblemAreasReport(startDate, endDate);
+      const problems = await getProblemAreasReport(startDate, endDate);
       
       logger?.info('Problem areas report generated', {
         negativeMarginCustomers: problems.negative_margin_customers.length,

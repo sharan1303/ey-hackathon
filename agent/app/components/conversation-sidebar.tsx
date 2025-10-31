@@ -1,7 +1,8 @@
 'use client';
 
-import { PlusOutlined, DeleteOutlined, MessageOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, MessageOutlined } from '@ant-design/icons';
 import { Button, List, Typography, Popconfirm, Empty, Spin } from 'antd';
+import Image from 'next/image';
 import {
   useConversations,
   useDeleteConversation,
@@ -74,40 +75,27 @@ export function ConversationSidebar({
         flexDirection: 'column',
       }}
     >
-      {/* Logo + Name */}
+      {/* Logo */}
       <div
         style={{
           padding: '16px 24px',
-          background: 'linear-gradient(135deg, #E6F4FF 0%, #F9F0FF 100%)',
+          background: 'white',
           borderBottom: '1px solid #e5e7eb',
           height: 56,
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <ThunderboltOutlined
+        <div style={{ position: 'relative', width: '100%', height: 40 }}>
+          <Image
+            src="/logo.svg"
+            alt="Logo"
+            fill
             style={{
-              fontSize: 20,
-              color: '#1677ff',
+              objectFit: 'contain',
             }}
           />
-          <Text
-            style={{
-              fontSize: 20,
-              fontWeight: 600,
-              color: '#262626',
-              lineHeight: '24px',
-            }}
-          >
-            Volt
-          </Text>
         </div>
       </div>
 

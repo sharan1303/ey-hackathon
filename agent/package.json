@@ -29,11 +29,13 @@
     "better-sqlite3": "^12.4.1",
     "decimal.js-light": "^2.5.1",
     "dotenv": "^16.6.1",
+    "idb": "^8.0.3",
     "libsql": "^0.4.6",
     "next": "16.0.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-markdown": "^10.1.0",
+    "sql.js": "^1.13.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -42,6 +44,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sql.js": "^1.4.9",
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "tailwindcss": "^4",

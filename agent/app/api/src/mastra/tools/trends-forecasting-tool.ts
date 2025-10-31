@@ -177,7 +177,7 @@ export const trendsForecastingTool = createTool({
     };
     
     if (analysisType === 'sales_trend') {
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns,
@@ -259,7 +259,7 @@ export const trendsForecastingTool = createTool({
       };
       
     } else if (analysisType === 'seasonality') {
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns,
@@ -343,7 +343,7 @@ export const trendsForecastingTool = createTool({
       };
       
     } else if (analysisType === 'growth') {
-      const currentTransactions = getSalesTransactions({
+      const currentTransactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns,
@@ -373,7 +373,7 @@ export const trendsForecastingTool = createTool({
         compEnd = new Date(end.setFullYear(end.getFullYear() - 1)).toISOString().split('T')[0];
       }
       
-      const comparisonTransactions = compStart && compEnd ? getSalesTransactions({
+      const comparisonTransactions = compStart && compEnd ? await getSalesTransactions({
         startDate: compStart,
         endDate: compEnd,
         includeReturns,
@@ -464,7 +464,7 @@ export const trendsForecastingTool = createTool({
       };
       
     } else if (analysisType === 'forecast') {
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns,
@@ -552,7 +552,7 @@ export const trendsForecastingTool = createTool({
       
     } else {
       // margin_trend
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns,

@@ -1,4 +1,4 @@
-import { getDb, getDefaultDateRange } from '../../database';
+import { queryAll, getDefaultDateRange } from '../../database';
 
 export interface SalesTransaction {
   invoice_number: string;
@@ -39,7 +39,7 @@ export interface SalesTransactionFilters {
  * Returns individual transaction records without any calculations or aggregations
  * SQL handles filtering for performance
  */
-export function getSalesTransactions(filters: SalesTransactionFilters = {}): SalesTransaction[] {
+export async function getSalesTransactions(filters: SalesTransactionFilters = {}): Promise<SalesTransaction[]> {
   const dateRange = filters.startDate && filters.endDate 
     ? { startDate: filters.startDate, endDate: filters.endDate } 
     : getDefaultDateRange();
@@ -161,7 +161,6 @@ export function getSalesTransactions(filters: SalesTransactionFilters = {}): Sal
     ${limitClause}
   `;
   
-  const db = getDb();
-  return db.prepare(query).all(...params) as SalesTransaction[];
+  return queryAll<SalesTransaction>(query, params);
 }
 

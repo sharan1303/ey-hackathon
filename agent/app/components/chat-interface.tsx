@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Bubble, Sender, useXAgent, useXChat } from '@ant-design/x';
 import type { GetProp } from 'antd';
 import { MessageBubble } from './message-bubble';
+import { SettingsPanel } from './settings-panel';
 import {
   saveConversation,
   getConversations,
@@ -13,6 +14,8 @@ import {
   type ToolCallData,
 } from '../lib/chat-api';
 import { generateTitle } from '../lib/message-parser';
+import { getBrowserDatabase } from '../lib/browser-db';
+import Image from 'next/image';
 
 type BubbleItem = {
   key: string;
@@ -38,9 +41,59 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [historicalMessages, setHistoricalMessages] = useState<ChatMessage[]>([]);
   const [conversationTitle, setConversationTitle] = useState<string>('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Track tool calls separately
   const [toolCalls, setToolCalls] = useState<Map<string, ChatMessage>>(new Map());
+
+  /**
+   * Handle query request from server by executing it in browser database
+   * and sending the result back to the server
+   */
+  const handleQueryRequest = async (queryId: string, sql: string, params: unknown[]) => {
+    try {
+      console.log(`🗄️ Executing query ${queryId} in browser...`);
+      
+      // Get browser database instance
+      const browserDB = getBrowserDatabase();
+      
+      // Execute the query
+      const result = await browserDB.query(sql, params);
+      
+      console.log(`✅ Query ${queryId} complete: ${result.values.length} rows`);
+      
+      // Send result back to server
+      await fetch('/api/query-callback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          queryId,
+          result: {
+            columns: result.columns,
+            values: result.values,
+          },
+        }),
+      });
+      
+      console.log(`📤 Query result ${queryId} sent to server`);
+    } catch (error) {
+      console.error(`❌ Query ${queryId} failed:`, error);
+      
+      // Send error back to server
+      await fetch('/api/query-callback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          queryId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }),
+      });
+    }
+  };
 
   // Create agent with custom request handler that supports streaming
   const [agent] = useXAgent({
@@ -132,6 +185,12 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
                     
                     console.log('✅ Tool result received:', event.toolName);
                   }
+                } else if (event.type === 'query-request') {
+                  // Execute query in browser database and send result back to server
+                  console.log('🗄️ Query request received:', event.queryId);
+                  handleQueryRequest(event.queryId, event.sql, event.params).catch((error) => {
+                    console.error('❌ Query execution failed:', error);
+                  });
                 } else if (event.type === 'text-delta') {
                   // Accumulate text content
                   fullContent += event.content;
@@ -359,6 +418,9 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
         background: 'white',
       }}
     >
+      {/* Settings Panel */}
+      <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
       {/* Header */}
       <div
         style={{
@@ -374,6 +436,44 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>
           {conversationTitle || 'New chat'}
         </h2>
+        
+        {/* Settings Button */}
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          aria-label="Open settings"
+          style={{
+            width: 32,
+            height: 32,
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 6,
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#f5f5f5';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1v6m0 6v6m9.66-9.66l-5.197 5.197M6.464 6.464L1.267 1.267M23 12h-6m-6 0H1m20.732 6.732l-5.197-5.197M6.464 17.536L1.267 22.733" />
+          </svg>
+        </button>
       </div>
 
       {/* Messages Area */}
@@ -400,12 +500,25 @@ export function ChatInterface({ conversationId, onConversationUpdate }: ChatInte
             }}
           >
             <div style={{ maxWidth: 900 }}>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <Image
+                  src="/volt.svg"
+                  alt="Logo"
+                  width={64}
+                  height={64}
+                  style={{
+                    objectFit: 'contain',
+                  }}
+                />
+              </div>
                 <h1 style={{ fontSize: 32, fontWeight: 600, marginBottom: 16 }}>
-                Say hi to Volt
+                Welcome, how can I help?
                 </h1>
-              <p style={{ fontSize: 16, color: '#666', marginBottom: 48 }}>
-                I&apos;m here to help you analyse pricing, profitability, and identify opportunities
-                in your sales data. Ask me anything about margins, customer performance, or
+              <p style={{ fontSize: 16, color: '#666' }}>
+                I&apos;m here to help you analyse pricing, profitability, and identify opportunities in your sales data.
+              </p>
+              <p style={{ fontSize: 16, color: '#666', marginBottom: 20 }}>
+                Ask me anything about margins, customer performance, or
                 product pricing.
               </p>
 

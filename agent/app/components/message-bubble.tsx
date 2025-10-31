@@ -51,9 +51,9 @@ export function MessageBubble({ content, role, loading, typing, toolCall }: Mess
   );
 
   const footer = !isUser && !loading ? (
-    <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+    <div style={{ display: 'flex', gap: 8 }}>
       <CopyOutlined
-        style={{ cursor: 'pointer', fontSize: 14, color: '#999' }}
+        style={{ cursor: 'pointer', fontSize: 20, color: '#999' }}
         onClick={handleCopy}
       />
     </div>

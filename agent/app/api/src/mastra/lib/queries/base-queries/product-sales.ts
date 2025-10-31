@@ -1,4 +1,4 @@
-import { getDb, getDefaultDateRange } from '../../database';
+import { queryAll, getDefaultDateRange } from '../../database';
 
 export interface ProductSalesData {
   item_code: string;
@@ -32,7 +32,7 @@ export interface ProductSalesFilters {
  * Returns raw aggregated data without calculated fields like margin or margin_percent
  * SQL handles filtering and aggregation for performance
  */
-export function getProductSales(filters: ProductSalesFilters = {}): ProductSalesData[] {
+export async function getProductSales(filters: ProductSalesFilters = {}): Promise<ProductSalesData[]> {
   const dateRange = filters.startDate && filters.endDate 
     ? { startDate: filters.startDate, endDate: filters.endDate } 
     : getDefaultDateRange();
@@ -134,7 +134,6 @@ export function getProductSales(filters: ProductSalesFilters = {}): ProductSales
     ${limitClause}
   `;
   
-  const db = getDb();
-  return db.prepare(query).all(...params) as ProductSalesData[];
+  return queryAll<ProductSalesData>(query, params);
 }
 

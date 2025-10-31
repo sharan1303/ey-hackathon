@@ -105,7 +105,7 @@ export const dataQualityTool = createTool({
     
     if (reportType === 'anomalies') {
       // Detect anomalous transactions
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -272,7 +272,7 @@ export const dataQualityTool = createTool({
       
     } else if (reportType === 'quality_summary') {
       // Generate overall data quality summary
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: true,
@@ -402,7 +402,7 @@ export const dataQualityTool = createTool({
       
     } else {
       // orphaned_products
-      const products = getProductSales({
+      const products = await getProductSales({
         startDate,
         endDate,
         includeReturns: false,

@@ -135,10 +135,10 @@ export const pricingAnalysisTool = createTool({
     
     if (analysisType === 'variance') {
       // Analyze price variance from catalogue prices
-      const products = getProductSales({
+      const products = await getProductSales({
         startDate,
         endDate,
-        includeReturns: false,
+        includeReturns: true,
         includeSamples: false,
         itemCodes: itemCode ? [itemCode] : undefined,
         sortBy: 'revenue',
@@ -192,7 +192,7 @@ export const pricingAnalysisTool = createTool({
       
     } else if (analysisType === 'consistency') {
       // Analyze price consistency across transactions
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -266,7 +266,7 @@ export const pricingAnalysisTool = createTool({
       
     } else if (analysisType === 'catalogue_compliance') {
       // Analyze compliance with catalogue prices
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -336,7 +336,7 @@ export const pricingAnalysisTool = createTool({
       
     } else {
       // tier_performance
-      const products = getProductSales({
+      const products = await getProductSales({
         startDate,
         endDate,
         includeReturns: false,

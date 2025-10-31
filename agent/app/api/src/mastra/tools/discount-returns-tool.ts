@@ -169,11 +169,11 @@ export const discountReturnsTool = createTool({
       // Analyze margin erosion from discounts
       // Get all transactions with discounts to calculate true margin erosion
       // Including returns, credit notes, and samples for complete margin impact picture
-      const allTransactions = getSalesTransactions({
+      const allTransactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: true,
-        includeSamples: true,
+        includeSamples: false,
         limit: 20000
       });
       
@@ -325,7 +325,7 @@ export const discountReturnsTool = createTool({
       
     } else if (analysisType === 'high_discounts') {
       // Flag unusually high discounts (filtered at DB level for efficiency)
-      const transactions = getSalesTransactions({
+      const transactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -382,7 +382,7 @@ export const discountReturnsTool = createTool({
       
     } else if (analysisType === 'returns') {
       // Analyze return patterns
-      const salesTransactions = getSalesTransactions({
+      const salesTransactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -391,7 +391,7 @@ export const discountReturnsTool = createTool({
         limit: 10000
       });
       
-      const rawReturnTransactions = getSalesTransactions({
+      const rawReturnTransactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: true,
@@ -493,7 +493,7 @@ export const discountReturnsTool = createTool({
       
     } else if (analysisType === 'rebates') {
       // Analyze rebates (credit notes that are not returns)
-      const salesTransactions = getSalesTransactions({
+      const salesTransactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -502,7 +502,7 @@ export const discountReturnsTool = createTool({
         limit: 10000
       });
       
-      const rawRebateTransactions = getSalesTransactions({
+      const rawRebateTransactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: true,
@@ -598,7 +598,7 @@ export const discountReturnsTool = createTool({
       
     } else {
       // credit_notes - comprehensive analysis
-      const invoices = getSalesTransactions({
+      const invoices = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -607,7 +607,7 @@ export const discountReturnsTool = createTool({
         limit: 10000
       });
       
-      const creditNotes = getSalesTransactions({
+      const creditNotes = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: true,

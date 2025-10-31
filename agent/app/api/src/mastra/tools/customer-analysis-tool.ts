@@ -138,7 +138,7 @@ export const customerAnalysisTool = createTool({
     
     if (analysisType === 'lifetime_value') {
       // Calculate customer lifetime value
-      const customers = getCustomerSales({
+      const customers = await getCustomerSales({
         startDate,
         endDate,
         includeReturns: false,
@@ -150,7 +150,7 @@ export const customerAnalysisTool = createTool({
       });
       
       // Get transactions to calculate dates and frequency
-      const allTransactions = getSalesTransactions({
+      const allTransactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -219,7 +219,7 @@ export const customerAnalysisTool = createTool({
       
     } else if (analysisType === 'segmentation') {
       // Segment customers by revenue and margin
-      const customers = getCustomerSales({
+      const customers = await getCustomerSales({
         startDate,
         endDate,
         includeReturns: false,
@@ -285,7 +285,7 @@ export const customerAnalysisTool = createTool({
       
     } else if (analysisType === 'churn_risk') {
       // Identify customers at risk of churning
-      const customers = getCustomerSales({
+      const customers = await getCustomerSales({
         startDate,
         endDate,
         includeReturns: false,
@@ -295,7 +295,7 @@ export const customerAnalysisTool = createTool({
         limit: 200
       });
       
-      const allTransactions = getSalesTransactions({
+      const allTransactions = await getSalesTransactions({
         startDate,
         endDate,
         includeReturns: false,
@@ -378,7 +378,7 @@ export const customerAnalysisTool = createTool({
       
     } else {
       // concentration analysis
-      const customers = getCustomerSales({
+      const customers = await getCustomerSales({
         startDate,
         endDate,
         includeReturns: false,
