@@ -5,17 +5,8 @@ Import and analyze Voltura Group sales, pricing, and inventory data using SQLite
 ## Quick Start
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Create database schema
-pnpm run schema
-
-# Import data
-pnpm run dev
-
-# Run example queries (optional)
-pnpm run query
+# Install dependencies, import data into SQLite database, and clean data
+pnpm set up
 ```
 
 ## Commands
@@ -23,16 +14,8 @@ pnpm run query
 ### Schema Management
 
 ```bash
-pnpm run schema        # Create or verify schema
-pnpm run schema reset  # Reset schema (⚠️ deletes all data)
-pnpm run schema info   # Show database details
-```
-
-### Data Import
-
-```bash
-pnpm run dev            # Import data (preserves existing)
-pnpm run import:reset   # Delete database and reimport
+pnpm schema        # Create or verify schema
+pnpm import:reset  # Delete and reimport all data
 ```
 
 ### Data Cleaning
