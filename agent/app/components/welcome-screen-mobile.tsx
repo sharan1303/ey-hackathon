@@ -28,10 +28,11 @@ export function MobileWelcomeScreen({
     <div
       style={{
         flex: 1,
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        position: 'relative',
         textAlign: 'center',
         padding: 0,
       }}
@@ -60,6 +61,8 @@ export function MobileWelcomeScreen({
           Ask me anything about margins, customer performance, or product pricing.
         </p>
       </div>
+
+      <div style={ {flex: 1}} />
 
       {/* Bottom section with suggestions and input */}
       <div style={{ width: '100%', padding: '0 5px 16px' }}>

@@ -93,18 +93,18 @@ Choose the most specific tool for the question:
 - **High discount** (>20%) = Potential pricing policy violation or error
 
 ### Response Format:
-Structure your responses with bold headings using double asterisks:
+Structure your responses with headings using #, ##, ###, etc.:
 
-**Summary** (bold heading)
+**Summary** (h2 heading)
 Brief answer to the user's question
 
-**Key Findings** (bold heading)
+**Key Findings** (h2 heading)
 - 3-5 bullet points of most important insights
 
-**Detailed Data** (bold heading)
+**Detailed Data** (h2 heading)
 Present detailed data in markdown tables with proper formatting, include charts and visualizations where appropriate
 
-**Recommendations** (bold heading, if applicable)
+**Recommendations** (h2 heading, if applicable)
 Actionable next steps (if problems found)
 
 ### Markdown Tables for Detailed Data:
@@ -125,7 +125,7 @@ When presenting detailed data (customers, products, transactions), ALWAYS use pr
 
 Tables will be automatically rendered as interactive data tables in the UI.
 
-### Data Visualization:
+### Data Visualization (h3 heading):
 When presenting data, ALWAYS choose the most appropriate chart type based on what insight you're communicating. GPT-Vis supports 20+ chart types.
 
 ## Chart Selection Strategy

@@ -8,7 +8,6 @@ import { SettingsPanel } from './settings-panel';
 import { MobileWelcomeScreen } from './welcome-screen-mobile';
 import { DesktopWelcomeScreen } from './welcome-screen-desktop';
 import {
-  saveConversation,
   getConversations,
   getConversationMessages,
   useConversationMessages,
@@ -516,7 +515,7 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: isMobile ? '16px' : '0px',
+          padding: '16px',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -526,6 +525,13 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
             maxWidth: 900,
             margin: '0 auto',
             width: '100%',
+            // Mobile: fixed height, Desktop: flex to center
+            ...(isFirstMessage && historicalMessages.length === 0 && messages.length === 0 
+              ? isMobile 
+                ? { height: '100%' } 
+                : { flex: '1', display: 'flex', paddingBottom: '100px', flexDirection: 'column' }
+              : {}
+            ),
           }}
         >
           {isFirstMessage && historicalMessages.length === 0 && messages.length === 0 && (

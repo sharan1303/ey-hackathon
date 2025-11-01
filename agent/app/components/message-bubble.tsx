@@ -2,8 +2,6 @@ import { Bubble } from '@ant-design/x';
 import { CopyOutlined } from '@ant-design/icons';
 import { App } from 'antd';
 import { GPTVisLite, withDefaultChartCode } from '@antv/gpt-vis';
-import { DataVisualizer } from './data-visualizer';
-import { extractTables } from '../lib/message-parser';
 import { ToolCallBubble } from './tool-call-bubble';
 import type { ToolCallData } from '../lib/chat-api';
 
@@ -37,16 +35,12 @@ export function MessageBubble({ content, role, loading, typing, toolCall }: Mess
     );
   }
 
-  // Use GPT-Vis for assistant messages with table support, plain text for user messages
+  // Use GPT-Vis for assistant messages, plain text for user messages
   const bubbleContent = isUser ? (
     <div>{content}</div>
   ) : (
     <div className="markdown-content" lang="en">
       <GPTVisLite components={{ code: CodeBlock }}>{content}</GPTVisLite>
-      {/* Render tables separately if GPTVis doesn't handle them properly */}
-      {extractTables(content).length > 0 && (
-        <DataVisualizer content={content} />
-      )}
     </div>
   );
 
