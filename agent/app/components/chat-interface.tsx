@@ -418,7 +418,6 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
       <div
         style={{
           background: 'white',
-          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
           display: 'flex',
           alignItems: 'center',
@@ -517,51 +516,59 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: isMobile ? '16px' : '24px',
+          padding: isMobile ? '16px' : '0px',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
-        {isFirstMessage && historicalMessages.length === 0 && messages.length === 0 && (
-          isMobile ? (
-            <MobileWelcomeScreen
-              content={content}
-              onContentChange={setContent}
-              onSubmit={handleSubmit}
-              isLoading={agent.isRequesting()}
-            />
-          ) : (
-            <DesktopWelcomeScreen
-              content={content}
-              onContentChange={setContent}
-              onSubmit={handleSubmit}
-              isLoading={agent.isRequesting()}
-            />
-          )
-        )}
+        <div
+          style={{
+            maxWidth: 900,
+            margin: '0 auto',
+            width: '100%',
+          }}
+        >
+          {isFirstMessage && historicalMessages.length === 0 && messages.length === 0 && (
+            isMobile ? (
+              <MobileWelcomeScreen
+                content={content}
+                onContentChange={setContent}
+                onSubmit={handleSubmit}
+                isLoading={agent.isRequesting()}
+              />
+            ) : (
+              <DesktopWelcomeScreen
+                content={content}
+                onContentChange={setContent}
+                onSubmit={handleSubmit}
+                isLoading={agent.isRequesting()}
+              />
+            )
+          )}
 
-        {bubbleItems.length > 0 && (
-          <Bubble.List
-            roles={roles}
-            items={bubbleItems.map((item) => {
-              const { toolCall, ...bubbleProps } = item as BubbleItem;
-              return {
-                ...bubbleProps,
-                content: (
-                  <MessageBubble
-                    content={item.content as string}
-                    role={item.role}
-                    loading={item.loading}
-                    typing={item.role === 'assistant' && item.loading}
-                    toolCall={toolCall}
-                  />
-                ),
-              };
-            })}
-          />
-        )}
+          {bubbleItems.length > 0 && (
+            <Bubble.List
+              roles={roles}
+              items={bubbleItems.map((item) => {
+                const { toolCall, ...bubbleProps } = item as BubbleItem;
+                return {
+                  ...bubbleProps,
+                  content: (
+                    <MessageBubble
+                      content={item.content as string}
+                      role={item.role}
+                      loading={item.loading}
+                      typing={item.role === 'assistant' && item.loading}
+                      toolCall={toolCall}
+                    />
+                  ),
+                };
+              })}
+            />
+          )}
 
-        <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input Area - Only shown when there are messages */}
@@ -569,7 +576,6 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
         <div
           style={{
             background: 'white',
-            borderTop: '1px solid #e5e7eb',
             padding: isMobile ? '12px 16px' : '16px 24px',
           }}
         >
