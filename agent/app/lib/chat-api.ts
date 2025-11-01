@@ -233,3 +233,145 @@ export function useDeleteConversation() {
   });
 }
 
+/**
+ * Hook to fetch messages for a specific conversation
+ */
+export function useConversationMessages(conversationId: string) {
+  return useQuery({
+    queryKey: ['messages', conversationId],
+    queryFn: () => getConversationMessages(conversationId),
+    staleTime: 0,
+  });
+}
+
+/**
+ * Hook to save a conversation with cache invalidation and optimistic updates
+ */
+export function useSaveConversation() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (conversation: Conversation) => {
+      saveConversation(conversation);
+      return Promise.resolve(conversation);
+    },
+    onMutate: async (newConversation) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['conversations'] });
+      await queryClient.cancelQueries({ queryKey: ['messages', newConversation.id] });
+      await queryClient.cancelQueries({ queryKey: ['conversation', newConversation.id] });
+
+      // Snapshot the previous values
+      const previousConversations = queryClient.getQueryData<Conversation[]>(['conversations']);
+      const previousMessages = queryClient.getQueryData<ChatMessage[]>(['messages', newConversation.id]);
+      const previousConversation = queryClient.getQueryData<Conversation>(['conversation', newConversation.id]);
+
+      // Optimistically update conversations list
+      queryClient.setQueryData<Conversation[]>(['conversations'], (old = []) => {
+        const index = old.findIndex(c => c.id === newConversation.id);
+        if (index >= 0) {
+          const updated = [...old];
+          updated[index] = newConversation;
+          return updated;
+        }
+        return [newConversation, ...old];
+      });
+
+      // Optimistically update messages
+      if (newConversation.messages) {
+        queryClient.setQueryData(['messages', newConversation.id], newConversation.messages);
+      }
+
+      // Optimistically update single conversation
+      queryClient.setQueryData(['conversation', newConversation.id], newConversation);
+
+      // Return context with previous values
+      return { previousConversations, previousMessages, previousConversation };
+    },
+    onError: (_error, newConversation, context) => {
+      // Rollback on error
+      if (context?.previousConversations) {
+        queryClient.setQueryData(['conversations'], context.previousConversations);
+      }
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['messages', newConversation.id], context.previousMessages);
+      }
+      if (context?.previousConversation) {
+        queryClient.setQueryData(['conversation', newConversation.id], context.previousConversation);
+      }
+    },
+    onSettled: (conversation) => {
+      // Refetch to ensure data is in sync with storage
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      if (conversation) {
+        queryClient.invalidateQueries({ queryKey: ['messages', conversation.id] });
+        queryClient.invalidateQueries({ queryKey: ['conversation', conversation.id] });
+      }
+    },
+  });
+}
+
+/**
+ * Hook to fetch a single conversation
+ */
+export function useConversation(conversationId: string) {
+  return useQuery({
+    queryKey: ['conversation', conversationId],
+    queryFn: () => {
+      const conversations = getConversations();
+      return conversations.find(c => c.id === conversationId) ?? null;
+    },
+    enabled: !!conversationId, // Only run query if conversationId exists
+  });
+}
+
+/**
+ * Hook to update conversation title with cache invalidation and optimistic updates
+ */
+export function useUpdateConversationTitle() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ conversationId, title }: { conversationId: string; title: string }) => {
+      updateConversationTitle(conversationId, title);
+      return Promise.resolve({ conversationId, title });
+    },
+    onMutate: async ({ conversationId, title }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['conversations'] });
+      await queryClient.cancelQueries({ queryKey: ['conversation', conversationId] });
+
+      // Snapshot the previous values
+      const previousConversations = queryClient.getQueryData<Conversation[]>(['conversations']);
+      const previousConversation = queryClient.getQueryData<Conversation>(['conversation', conversationId]);
+
+      // Optimistically update conversations list
+      queryClient.setQueryData<Conversation[]>(['conversations'], (old = []) => {
+        return old.map(c => c.id === conversationId ? { ...c, title } : c);
+      });
+
+      // Optimistically update single conversation
+      queryClient.setQueryData<Conversation>(['conversation', conversationId], (old) => {
+        return old ? { ...old, title } : old;
+      });
+
+      // Return context with previous values
+      return { previousConversations, previousConversation };
+    },
+    onError: (_error, { conversationId }, context) => {
+      // Rollback on error
+      if (context?.previousConversations) {
+        queryClient.setQueryData(['conversations'], context.previousConversations);
+      }
+      if (context?.previousConversation) {
+        queryClient.setQueryData(['conversation', conversationId], context.previousConversation);
+      }
+    },
+    onSettled: (_data, _error, { conversationId }) => {
+      // Refetch to ensure data is in sync with storage
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+    },
+  });
+}
+

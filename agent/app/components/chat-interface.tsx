@@ -11,6 +11,9 @@ import {
   saveConversation,
   getConversations,
   getConversationMessages,
+  useConversationMessages,
+  useSaveConversation,
+  useConversation,
   type Conversation,
   type ChatMessage,
   type ToolCallData,
@@ -42,12 +45,17 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
   const [content, setContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
-  const [historicalMessages, setHistoricalMessages] = useState<ChatMessage[]>([]);
-  const [conversationTitle, setConversationTitle] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Track tool calls separately
   const [toolCalls, setToolCalls] = useState<Map<string, ChatMessage>>(new Map());
+
+  // React Query hooks
+  const { data: historicalMessages = [] } = useConversationMessages(conversationId);
+  const { data: conversation } = useConversation(conversationId);
+  const saveConversationMutation = useSaveConversation();
+  
+  const conversationTitle = conversation?.title || '';
 
   /**
    * Handle query request from server by executing it in browser database
@@ -247,7 +255,7 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
     toolCallMessages: ChatMessage[]
   ) => {
     const conversations = getConversations();
-    let conversation = conversations.find((c) => c.id === conversationId);
+    let conversationData = conversations.find((c) => c.id === conversationId);
 
     // Create new messages
     const userMsg: ChatMessage = {
@@ -274,8 +282,8 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
     const existingMessages = getConversationMessages(conversationId);
     const updatedMessages = [...existingMessages, userMsg, ...toolCallMsgs, assistantMsg];
 
-    if (!conversation) {
-      conversation = {
+    if (!conversationData) {
+      conversationData = {
         id: conversationId,
         title: generateTitle(userMessage),
         lastMessage: aiResponse.substring(0, 100),
@@ -284,41 +292,24 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
         messages: updatedMessages,
       };
     } else {
-      conversation.lastMessage = aiResponse.substring(0, 100);
-      conversation.timestamp = Date.now();
-      conversation.messageCount = updatedMessages.length;
-      conversation.messages = updatedMessages;
+      conversationData.lastMessage = aiResponse.substring(0, 100);
+      conversationData.timestamp = Date.now();
+      conversationData.messageCount = updatedMessages.length;
+      conversationData.messages = updatedMessages;
     }
 
-    saveConversation(conversation);
-    
-    // Update historical messages state
-    setHistoricalMessages(updatedMessages);
-    
-    // Update the conversation title state
-    setConversationTitle(conversation.title);
+    // Use mutation to save conversation
+    saveConversationMutation.mutate(conversationData);
     
     if (onConversationUpdate) {
-      onConversationUpdate(conversation);
+      onConversationUpdate(conversationData);
     }
   };
 
-  // Load historical messages when conversation changes
+  // Update isFirstMessage based on conversation data
   useEffect(() => {
-    const loadedMessages = getConversationMessages(conversationId);
-    setHistoricalMessages(loadedMessages);
-    
-    const conversations = getConversations();
-    const conversation = conversations.find((c) => c.id === conversationId);
     setIsFirstMessage(!conversation || conversation.messageCount === 0);
-    
-    // Load the conversation title
-    if (conversation) {
-      setConversationTitle(conversation.title);
-    } else {
-      setConversationTitle('');
-    }
-  }, [conversationId]);
+  }, [conversation]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -331,7 +322,6 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
     // Optimistically set the title for the first message
     if (isFirstMessage) {
       const newTitle = generateTitle(value);
-      setConversationTitle(newTitle);
       
       // Optimistically create/update conversation in storage
       const conversations = getConversations();
@@ -346,7 +336,7 @@ export function ChatInterface({ conversationId, onConversationUpdate, isMobile, 
           messageCount: 0,
           messages: [],
         };
-        saveConversation(optimisticConversation);
+        saveConversationMutation.mutate(optimisticConversation);
         
         if (onConversationUpdate) {
           onConversationUpdate(optimisticConversation);
