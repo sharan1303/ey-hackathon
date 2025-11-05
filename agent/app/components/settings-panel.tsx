@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Switch, Select } from 'antd';
 
 interface SettingsPanelProps {
@@ -23,6 +23,19 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [provider, setProvider] = useState('azure');
   const [model, setModel] = useState('gpt-5');
   const [memoryEnabled, setMemoryEnabled] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const systemPrompt = `You are a financial analysis expert specialising in pricing and profitability for Voltura Group.
 
@@ -63,7 +76,7 @@ You help analyse sales data to answer questions about:
           top: 0,
           right: 0,
           bottom: 0,
-          width: 420,
+          width: isMobile ? '100vw' : 420,
           background: 'white',
           boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.15)',
           zIndex: 1000,
@@ -76,44 +89,87 @@ You help analyse sales data to answer questions about:
         {/* Header */}
         <div
           style={{
-            padding: '20px 24px',
+            padding: '0 24px',
             borderBottom: '1px solid #e5e7eb',
             background: '#1e293b',
             color: 'white',
+            height: 56,
+            display: 'flex',
+            alignItems: 'center',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                background: '#334155',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  background: '#334155',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 1v6m0 6v6m9.66-9.66l-5.197 5.197M6.464 6.464L1.267 1.267M23 12h-6m-6 0H1m20.732 6.732l-5.197-5.197M6.464 17.536L1.267 22.733" />
-              </svg>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 1v6m0 6v6m9.66-9.66l-5.197 5.197M6.464 6.464L1.267 1.267M23 12h-6m-6 0H1m20.732 6.732l-5.197-5.197M6.464 17.536L1.267 22.733" />
+                </svg>
+              </div>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
+                  Settings
+                </h2>
+              </div>
             </div>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-                Pricing Analysis Agent
-              </h2>
-              <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>
-                Settings
-              </p>
-            </div>
+            
+            {/* Close button for mobile */}
+            {isMobile && (
+              <button
+                onClick={onClose}
+                aria-label="Close settings"
+                style={{
+                  width: 32,
+                  height: 32,
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 6,
+                  transition: 'background 0.2s',
+                  color: 'white',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 
@@ -142,7 +198,7 @@ You help analyse sales data to answer questions about:
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Model</h3>
             </div>
             <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#666' }}>
-              Description
+              Choose a provider and model for the agent
             </p>
             <div style={{ display: 'flex', gap: 12 }}>
               <Select
@@ -151,6 +207,7 @@ You help analyse sales data to answer questions about:
                 style={{ flex: 1 }}
                 options={[
                   { value: 'azure', label: 'azure' },
+                  { value: 'openai', label: 'openai' },
                 ]}
               />
               <Select
@@ -159,6 +216,10 @@ You help analyse sales data to answer questions about:
                 style={{ flex: 1 }}
                 options={[
                   { value: 'gpt-5', label: 'gpt-5' },
+                  { value: 'gpt-5-mini', label: 'gpt-5-mini' },
+                  { value: 'gpt-4.1', label: 'gpt-4.1' },
+                  { value: 'gpt-4', label: 'gpt-4' },
+                  { value: 'gpt-4o', label: 'gpt-4o' },
                 ]}
               />
             </div>
@@ -181,7 +242,7 @@ You help analyse sales data to answer questions about:
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Memory</h3>
             </div>
             <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#666' }}>
-              Description
+              Enable memory and chat history
             </p>
             <Switch
               checked={memoryEnabled}
@@ -206,7 +267,7 @@ You help analyse sales data to answer questions about:
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Tools</h3>
             </div>
             <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#666' }}>
-              Description
+              Tools available for queries and analysis
             </p>
             <div
               style={{
@@ -263,7 +324,7 @@ You help analyse sales data to answer questions about:
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>System prompt</h3>
             </div>
             <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#666' }}>
-              Description
+              Control your agent&apos;s behaviour and responses
             </p>
             <div
               style={{
