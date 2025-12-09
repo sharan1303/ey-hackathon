@@ -12,16 +12,13 @@ const nextConfig: NextConfig = {
     '@libsql/linux-x64-gnu',
     '@libsql/win32-x64-msvc',
     'sql.js', // Exclude from server bundle - browser only
+    'pino', // Exclude from bundling - server-only package
+    'thread-stream', // Exclude from bundling - server-only package, avoids test file issues
+    '@mastra/loggers', // Exclude to prevent Turbopack from tracing into pino/thread-stream
   ],
-  // Configure Turbopack to handle sql.js for client-only usage
+  // Configure Turbopack
   turbopack: {
-    resolveExtensions: [
-      '.js',
-      '.jsx',
-      '.ts',
-      '.tsx',
-      '.json',
-    ],
+    resolveExtensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -38,6 +35,17 @@ const nextConfig: NextConfig = {
       if (Array.isArray(config.externals)) {
         config.externals.push('sql.js');
       }
+      // Ignore test files from thread-stream
+      const IgnorePlugin = require('webpack').IgnorePlugin;
+      config.plugins = config.plugins || [];
+      config.plugins.push(
+        new IgnorePlugin({
+          resourceRegExp: /thread-stream\/test/,
+        }),
+        new IgnorePlugin({
+          resourceRegExp: /thread-stream\/bench/,
+        })
+      );
     }
     return config;
   },
